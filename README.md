@@ -46,6 +46,104 @@ GOOS=windows GOARCH=amd64 go build -o bin/avail-windows-amd64.exe ./cmd/avail
 
 ---
 
+## Usage
+
+Currently, the following commands are implemented:
+
+### Configuration
+
+On first run, `avail` will create a default configuration file at `~/.config/avail/config.toml`. You can customize:
+
+- `timezone` - Your timezone (default: "UTC")
+- `meeting_duration` - Default meeting duration (default: 30 minutes)
+- `work_hours_start` - Start of work day (default: "09:00")
+- `work_hours_end` - End of work day (default: "17:00")
+- `calendar_provider` - Calendar provider (default: "google")
+
+Example config:
+
+```toml
+timezone = "America/New_York"
+meeting_duration = "30m"
+work_hours_start = "09:00"
+work_hours_end = "17:00"
+calendar_provider = "google"
+```
+
+### Show Availability
+
+Display your availability for the next 5 days:
+
+```bash
+$ avail show
+```
+
+Output example:
+
+```
+Your availability (next 5 days):
+
+Tue 12 Mar
+  • 14:00–16:00
+
+Wed 13 Mar
+  • 10:00–11:30
+
+Fri 15 Mar
+  • after 13:00
+
+Time zone: UTC
+```
+
+**Note:** Currently requires Google Calendar authentication to be set up manually. The `avail auth` command is planned but not yet implemented.
+
+### Copy to Clipboard
+
+Copy formatted availability text to your clipboard:
+
+```bash
+$ avail copy
+```
+
+This copies text in the following format:
+
+```
+I'm free:
+• Tue 12 Mar 14:00–16:00
+• Wed 13 Mar 10:00–11:30
+• Fri 15 Mar after 13:00
+```
+
+Perfect for pasting into emails, Slack, or other messaging apps.
+
+### Help
+
+View available commands and options:
+
+```bash
+$ avail --help
+$ avail show --help
+$ avail copy --help
+```
+
+---
+
+## Current Status
+
+**Implemented:**
+- ✅ Core availability engine
+- ✅ Configuration system
+- ✅ `avail show` command
+- ✅ `avail copy` command
+- ✅ Google Calendar API integration structure
+
+**In Progress / Planned:**
+- ⏳ `avail auth` command (OAuth flow)
+- ⏳ `avail link` command (shareable links)
+- ⏳ `avail propose` command (interactive TUI for time selection)
+
+---
+
 ## Reframed Capability
 
 From the guest’s perspective:
@@ -253,7 +351,9 @@ No long-running processes. No event listeners.
 
 ---
 
-## 3. MVP CLI / TUI Flow (Concrete)
+## 3. MVP CLI / TUI Flow (Planned)
+
+> **Note:** This section describes the planned full MVP feature set. See the [Usage](#usage) section above for currently implemented commands.
 
 ### Installation
 
@@ -265,7 +365,7 @@ $ npm install -g avail
 
 ---
 
-### Auth (one-time)
+### Auth (one-time) - *Planned*
 
 ```
 $ avail auth
@@ -277,7 +377,7 @@ Tokens stored securely (keychain if possible).
 
 ---
 
-### Basic availability
+### Basic availability - *Implemented*
 
 ```
 $ avail show
@@ -304,7 +404,7 @@ This alone is a useful tool.
 
 ---
 
-### Copyable output
+### Copyable output - *Implemented*
 
 ```
 $ avail copy
@@ -313,15 +413,15 @@ $ avail copy
 Copies to clipboard:
 
 ```
-I’m free:
-• Tue 14:00–16:00
-• Wed 10:00–11:30
-• Fri after 13:00
+I'm free:
+• Tue 12 Mar 14:00–16:00
+• Wed 13 Mar 10:00–11:30
+• Fri 15 Mar after 13:00
 ```
 
 ---
 
-### Generate shareable link
+### Generate shareable link - *Planned*
 
 ```
 $ avail link
@@ -337,7 +437,7 @@ https://avail.app/alex/abc123
 
 ---
 
-### Propose a time (structured intent)
+### Propose a time (structured intent) - *Planned*
 
 ```
 $ avail propose
