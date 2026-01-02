@@ -23,7 +23,6 @@ func FormatTimeBlock(block availability.TimeBlock, location *time.Location) stri
 // when the block starts after the beginning of work hours.
 func FormatTimeBlockForDay(block availability.TimeBlock, dayStart time.Time, location *time.Location) string {
 	start := block.Start.In(location)
-	end := block.End.In(location)
 
 	dayStartTime := dayStart.In(location).Truncate(24 * time.Hour)
 	blockStartTime := start.Truncate(24 * time.Hour)
@@ -35,7 +34,6 @@ func FormatTimeBlockForDay(block availability.TimeBlock, dayStart time.Time, loc
 
 	// Otherwise, use "after" notation
 	startStr := formatTime(start)
-	endStr := formatTime(end)
 	return fmt.Sprintf("after %s", startStr)
 }
 
