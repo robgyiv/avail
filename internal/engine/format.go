@@ -23,12 +23,10 @@ func FormatTimeBlock(block availability.TimeBlock, location *time.Location) stri
 // when the block starts after the beginning of work hours.
 func FormatTimeBlockForDay(block availability.TimeBlock, dayStart time.Time, location *time.Location) string {
 	start := block.Start.In(location)
+	dayStartTime := dayStart.In(location)
 
-	dayStartTime := dayStart.In(location).Truncate(24 * time.Hour)
-	blockStartTime := start.Truncate(24 * time.Hour)
-
-	// If the block starts at the beginning of the day (or very close), use normal format
-	if blockStartTime.Equal(dayStartTime) || start.Sub(dayStartTime) < time.Hour {
+	// If the block starts at or near the day start (within 1 hour), use normal format
+	if start.Sub(dayStartTime) <= time.Hour && start.Sub(dayStartTime) >= 0 {
 		return FormatTimeBlock(block, location)
 	}
 
