@@ -52,9 +52,13 @@ func parseTime(s string) (time.Duration, error) {
 }
 
 // Load reads and parses the config file.
+// If the file doesn't exist, it returns the default config.
 func Load(path string) (*Config, error) {
 	data, err := readFile(path)
 	if err != nil {
+		if os.IsNotExist(err) {
+			return Default(), nil
+		}
 		return nil, err
 	}
 
@@ -64,6 +68,54 @@ func Load(path string) (*Config, error) {
 	}
 
 	return &cfg, nil
+}
+
+// LoadOrCreate loads the config from the default path, creating it if it doesn't exist.
+func LoadOrCreate() (*Config, error) {
+	configPath, err := ConfigPath()
+	if err != nil {
+		return nil, err
+	}
+
+	cfg, err := Load(configPath)
+	if err != nil {
+		return nil, err
+	}
+
+	// If config file doesn't exist, create it with defaults
+	if _, err := os.Stat(configPath); os.IsNotExist(err) {
+		if err := EnsureConfigDir(); err != nil {
+			return nil, fmt.Errorf("failed to create config directory: %w", err)
+		}
+
+		if err := cfg.Save(configPath); err != nil {
+			return nil, fmt.Errorf("failed to save default config: %w", err)
+		}
+	}
+
+	return cfg, nil
+}
+
+// Validate checks that the config values are valid.
+func (c *Config) Validate() error {
+	if c.Timezone == "" {
+		return fmt.Errorf("timezone is required")
+	}
+
+	if c.MeetingDuration <= 0 {
+		return fmt.Errorf("meeting_duration must be positive")
+	}
+
+	if c.WorkHoursStart == "" || c.WorkHoursEnd == "" {
+		return fmt.Errorf("work hours start and end are required")
+	}
+
+	_, err := c.WorkHours()
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 // Save writes the config to a file.
