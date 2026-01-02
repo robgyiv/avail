@@ -12,6 +12,40 @@ Implemented first as a TUI to validate functionality and core library, then exte
 
 ---
 
+## Setup
+
+### Prerequisites
+
+- Go 1.21 or later
+
+### Building from Source
+
+```bash
+# Clone the repository
+git clone https://github.com/robgyiv/availability.git
+cd availability
+
+# Build the binary
+go build -o bin/avail ./cmd/avail
+
+# Or install directly
+go install ./cmd/avail
+```
+
+### Development
+
+```bash
+# Run tests
+go test ./...
+
+# Build for multiple platforms
+GOOS=darwin GOARCH=arm64 go build -o bin/avail-darwin-arm64 ./cmd/avail
+GOOS=linux GOARCH=amd64 go build -o bin/avail-linux-amd64 ./cmd/avail
+GOOS=windows GOARCH=amd64 go build -o bin/avail-windows-amd64.exe ./cmd/avail
+```
+
+---
+
 ## Reframed Capability
 
 From the guest’s perspective:
