@@ -3,9 +3,11 @@ package google
 import (
 	"context"
 	"fmt"
+	"os"
 	"time"
 
 	"golang.org/x/oauth2"
+	"golang.org/x/oauth2/google"
 	calendar "google.golang.org/api/calendar/v3"
 
 	cal "github.com/robgyiv/availability/internal/calendar"
@@ -30,13 +32,16 @@ func NewProvider() *Provider {
 
 // Authenticate performs OAuth2 authentication and stores the token.
 func (p *Provider) Authenticate(ctx context.Context) error {
-	// Get OAuth config (for MVP, using placeholder values)
-	// In production, these would come from config
-	oauthConfig := OAuthConfig(
-		"", // clientID - would come from config
-		"", // clientSecret - would come from config
-		"http://localhost:8080/callback",
-	)
+	// Get OAuth credentials from environment
+	clientID := os.Getenv("GOOGLE_CLIENT_ID")
+	clientSecret := os.Getenv("GOOGLE_CLIENT_SECRET")
+
+	if clientID == "" || clientSecret == "" {
+		return fmt.Errorf("OAuth credentials required (set GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET environment variables)")
+	}
+
+	// OAuthConfig will set redirect URL in Authenticate function
+	oauthConfig := OAuthConfig(clientID, clientSecret, "")
 
 	token, err := Authenticate(ctx, oauthConfig)
 	if err != nil {
@@ -62,6 +67,7 @@ func (p *Provider) Authenticate(ctx context.Context) error {
 	}
 
 	p.client = service
+	p.config = oauthConfig
 	return nil
 }
 
@@ -89,7 +95,10 @@ func (p *Provider) LoadToken(ctx context.Context) error {
 	}
 
 	// Refresh token if needed
-	oauthConfig := OAuthConfig("", "", "")
+	// For refresh, we don't need the full config, just the endpoint
+	oauthConfig := &oauth2.Config{
+		Endpoint: google.Endpoint,
+	}
 	token, err = RefreshToken(ctx, oauthConfig, token)
 	if err != nil {
 		return fmt.Errorf("failed to refresh token: %w", err)

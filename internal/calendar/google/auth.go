@@ -4,8 +4,11 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"net"
+	"net/http"
 	"os/exec"
 	"runtime"
+	"time"
 
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/google"
@@ -24,14 +27,11 @@ var (
 
 // OAuthConfig returns the OAuth2 configuration for Google Calendar.
 func OAuthConfig(clientID, clientSecret, redirectURL string) *oauth2.Config {
-	if oauth2Config != nil {
-		return oauth2Config
-	}
-
+	// Create a new config each time (redirectURL may vary)
 	oauth2Config = &oauth2.Config{
 		ClientID:     clientID,
 		ClientSecret: clientSecret,
-		RedirectURL:  redirectURL,
+		RedirectURL:  redirectURL, // Will be set in Authenticate if empty
 		Scopes:       []string{scope},
 		Endpoint:     google.Endpoint,
 	}
@@ -39,34 +39,103 @@ func OAuthConfig(clientID, clientSecret, redirectURL string) *oauth2.Config {
 	return oauth2Config
 }
 
-// Authenticate performs OAuth2 authentication flow.
-// For MVP, this is a simplified implementation that opens a browser.
+// Authenticate performs OAuth2 authentication flow using a local callback server.
 func Authenticate(ctx context.Context, config *oauth2.Config) (*oauth2.Token, error) {
-	// Generate auth URL
-	authURL := config.AuthCodeURL("state-token", oauth2.AccessTypeOffline)
+	// Find an available port
+	listener, err := net.Listen("tcp", ":0")
+	if err != nil {
+		return nil, fmt.Errorf("failed to start local server: %w", err)
+	}
+	defer listener.Close()
+
+	port := listener.Addr().(*net.TCPAddr).Port
+	redirectURL := fmt.Sprintf("http://localhost:%d/callback", port)
+	config.RedirectURL = redirectURL
+
+	state := "state-token-" + fmt.Sprintf("%d", time.Now().Unix())
+	authURL := config.AuthCodeURL(state, oauth2.AccessTypeOffline, oauth2.ApprovalForce)
+
+	// Channel to receive the auth code
+	codeChan := make(chan string, 1)
+	errChan := make(chan error, 1)
+
+	// Start local server to catch the callback
+	server := &http.Server{
+		ReadTimeout:  5 * time.Second,
+		WriteTimeout: 5 * time.Second,
+	}
+
+	server.Handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/callback" {
+			http.NotFound(w, r)
+			return
+		}
+
+		// Verify state
+		if r.URL.Query().Get("state") != state {
+			http.Error(w, "Invalid state parameter", http.StatusBadRequest)
+			errChan <- fmt.Errorf("invalid state parameter")
+			return
+		}
+
+		code := r.URL.Query().Get("code")
+		if code == "" {
+			http.Error(w, "Missing authorization code", http.StatusBadRequest)
+			errChan <- fmt.Errorf("missing authorization code")
+			return
+		}
+
+		// Send success response
+		w.Header().Set("Content-Type", "text/html")
+		w.WriteHeader(http.StatusOK)
+		fmt.Fprintf(w, `
+			<html>
+				<body>
+					<h1>Authentication successful!</h1>
+					<p>You can close this window and return to the terminal.</p>
+				</body>
+			</html>
+		`)
+
+		codeChan <- code
+
+		// Shutdown server after a short delay
+		go func() {
+			time.Sleep(500 * time.Millisecond)
+			server.Shutdown(context.Background())
+		}()
+	})
+
+	// Start server in goroutine
+	go func() {
+		if err := server.Serve(listener); err != nil && err != http.ErrServerClosed {
+			errChan <- fmt.Errorf("server error: %w", err)
+		}
+	}()
 
 	// Open browser
+	fmt.Printf("Opening browser for authentication...\n")
 	if err := openBrowser(authURL); err != nil {
-		return nil, fmt.Errorf("failed to open browser: %w", err)
+		fmt.Printf("Please visit the following URL in your browser:\n%s\n\n", authURL)
 	}
 
-	// For MVP, we'll need the user to copy the code manually
-	// In a full implementation, this would use a local server to catch the callback
-	fmt.Printf("Please visit: %s\n", authURL)
-	fmt.Print("Enter the authorization code: ")
-
-	var code string
-	if _, err := fmt.Scan(&code); err != nil {
-		return nil, fmt.Errorf("failed to read authorization code: %w", err)
+	// Wait for callback or timeout
+	select {
+	case code := <-codeChan:
+		// Exchange code for token
+		token, err := config.Exchange(ctx, code)
+		if err != nil {
+			return nil, fmt.Errorf("failed to exchange code for token: %w", err)
+		}
+		fmt.Println("✓ Authentication successful!")
+		return token, nil
+	case err := <-errChan:
+		return nil, err
+	case <-ctx.Done():
+		return nil, ctx.Err()
+	case <-time.After(5 * time.Minute):
+		return nil, fmt.Errorf("authentication timeout - please try again")
 	}
-
-	// Exchange code for token
-	token, err := config.Exchange(ctx, code)
-	if err != nil {
-		return nil, fmt.Errorf("failed to exchange code for token: %w", err)
-	}
-
-	return token, nil
 }
 
 // openBrowser opens the specified URL in the default browser.
