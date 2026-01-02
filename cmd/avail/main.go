@@ -1,6 +1,14 @@
 package main
 
+import (
+	"os"
+
+	"github.com/robgyiv/availability/internal/cli"
+)
+
 func main() {
-	// Placeholder for main entry point
+	if err := cli.NewRootCmd().Execute(); err != nil {
+		os.Exit(1)
+	}
 }
 
