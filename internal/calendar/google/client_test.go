@@ -1,9 +1,7 @@
 package google
 
 import (
-	"context"
 	"testing"
-	"time"
 )
 
 func TestProvider_IsAuthenticated(t *testing.T) {
@@ -16,4 +14,3 @@ func TestProvider_IsAuthenticated(t *testing.T) {
 // Note: Full integration tests would require OAuth setup and API credentials.
 // For MVP, we're testing the structure and interface compliance.
 // Full integration tests would be added later with proper OAuth test credentials.
-

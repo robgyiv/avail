@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"net/http"
 	"os/exec"
 	"runtime"
 
@@ -135,4 +134,3 @@ func NewCalendarService(ctx context.Context, token *oauth2.Token) (*calendar.Ser
 
 	return service, nil
 }
-

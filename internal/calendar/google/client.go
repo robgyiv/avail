@@ -6,13 +6,11 @@ import (
 	"time"
 
 	"golang.org/x/oauth2"
-	"golang.org/x/oauth2/google"
 	calendar "google.golang.org/api/calendar/v3"
-	"google.golang.org/api/option"
 
+	cal "github.com/robgyiv/availability/internal/calendar"
 	"github.com/robgyiv/availability/internal/config"
 	"github.com/robgyiv/availability/pkg/availability"
-	cal "github.com/robgyiv/availability/internal/calendar"
 )
 
 // Provider implements the calendar.Provider interface for Google Calendar.
@@ -163,4 +161,3 @@ func (p *Provider) ListEvents(ctx context.Context, start, end time.Time) ([]avai
 
 // Ensure Provider implements the calendar.Provider interface.
 var _ cal.Provider = (*Provider)(nil)
-
