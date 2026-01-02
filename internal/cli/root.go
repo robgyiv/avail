@@ -12,6 +12,8 @@ func NewRootCmd() *cobra.Command {
 		Long:  "A reliable way to generate human-friendly availability text from a real calendar, without forcing the recipient into a tool.",
 	}
 
+	cmd.AddCommand(newShowCmd())
+
 	return cmd
 }
 
