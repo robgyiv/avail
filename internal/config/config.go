@@ -57,8 +57,8 @@ func parseTime(s string) (time.Duration, error) {
 // configTOML is an intermediate struct for TOML unmarshaling that handles duration strings.
 type configTOML struct {
 	Timezone          string `toml:"timezone"`
-	MeetingDuration   string `toml:"meeting_duration"`
-	BufferDuration    string `toml:"buffer_duration"`
+	MeetingDuration   string `toml:"meeting_duration"` // e.g., "30m"
+	BufferDuration    string `toml:"buffer_duration"`  // e.g., "15m"
 	WorkHoursStart    string `toml:"work_hours_start"`
 	WorkHoursEnd      string `toml:"work_hours_end"`
 	CalendarProvider  string `toml:"calendar_provider"`
@@ -91,7 +91,7 @@ func Load(path string) (*Config, error) {
 		LocalCalendarPath: cfgTOML.LocalCalendarPath,
 	}
 
-	// Parse durations
+	// Parse durations from string format (e.g., "30m", "15m")
 	if cfgTOML.MeetingDuration != "" {
 		duration, err := time.ParseDuration(cfgTOML.MeetingDuration)
 		if err != nil {
@@ -194,8 +194,32 @@ func (c *Config) Validate() error {
 }
 
 // Save writes the config to a file.
+// Durations are saved in human-readable string format (e.g., "30m", "15m").
 func (c *Config) Save(path string) error {
-	data, err := toml.Marshal(c)
+	// Create a struct with string durations for TOML marshaling
+	type configSave struct {
+		Timezone          string `toml:"timezone"`
+		MeetingDuration   string `toml:"meeting_duration"`
+		BufferDuration    string `toml:"buffer_duration"`
+		WorkHoursStart    string `toml:"work_hours_start"`
+		WorkHoursEnd      string `toml:"work_hours_end"`
+		CalendarProvider  string `toml:"calendar_provider"`
+		CalendarMode      string `toml:"calendar_mode"`
+		LocalCalendarPath string `toml:"local_calendar_path"`
+	}
+
+	cfgSave := configSave{
+		Timezone:          c.Timezone,
+		MeetingDuration:   c.MeetingDuration.String(),
+		BufferDuration:    c.BufferDuration.String(),
+		WorkHoursStart:    c.WorkHoursStart,
+		WorkHoursEnd:      c.WorkHoursEnd,
+		CalendarProvider:  c.CalendarProvider,
+		CalendarMode:      c.CalendarMode,
+		LocalCalendarPath: c.LocalCalendarPath,
+	}
+
+	data, err := toml.Marshal(cfgSave)
 	if err != nil {
 		return fmt.Errorf("failed to marshal config: %w", err)
 	}
