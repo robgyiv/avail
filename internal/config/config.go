@@ -11,11 +11,14 @@ import (
 
 // Config represents the application configuration.
 type Config struct {
-	Timezone        string        `toml:"timezone"`
-	MeetingDuration time.Duration `toml:"meeting_duration"`
-	WorkHoursStart  string        `toml:"work_hours_start"` // e.g., "09:00"
-	WorkHoursEnd    string        `toml:"work_hours_end"`   // e.g., "17:00"
-	CalendarProvider string       `toml:"calendar_provider"` // "google", etc.
+	Timezone          string        `toml:"timezone"`
+	MeetingDuration   time.Duration `toml:"meeting_duration"`
+	BufferDuration    time.Duration `toml:"buffer_duration"`
+	WorkHoursStart    string        `toml:"work_hours_start"`    // e.g., "09:00"
+	WorkHoursEnd      string        `toml:"work_hours_end"`      // e.g., "17:00"
+	CalendarProvider  string        `toml:"calendar_provider"`   // "google", "apple", etc.
+	CalendarMode      string        `toml:"calendar_mode"`       // "network" (default) or "local"
+	LocalCalendarPath string        `toml:"local_calendar_path"` // Path to .ics file for local mode
 }
 
 // WorkHours returns the WorkHours struct from config.
@@ -51,6 +54,18 @@ func parseTime(s string) (time.Duration, error) {
 	return time.Duration(h)*time.Hour + time.Duration(m)*time.Minute, nil
 }
 
+// configTOML is an intermediate struct for TOML unmarshaling that handles duration strings.
+type configTOML struct {
+	Timezone          string `toml:"timezone"`
+	MeetingDuration   string `toml:"meeting_duration"`
+	BufferDuration    string `toml:"buffer_duration"`
+	WorkHoursStart    string `toml:"work_hours_start"`
+	WorkHoursEnd      string `toml:"work_hours_end"`
+	CalendarProvider  string `toml:"calendar_provider"`
+	CalendarMode      string `toml:"calendar_mode"`
+	LocalCalendarPath string `toml:"local_calendar_path"`
+}
+
 // Load reads and parses the config file.
 // If the file doesn't exist, it returns the default config.
 func Load(path string) (*Config, error) {
@@ -62,12 +77,55 @@ func Load(path string) (*Config, error) {
 		return nil, err
 	}
 
-	var cfg Config
-	if err := toml.Unmarshal(data, &cfg); err != nil {
+	var cfgTOML configTOML
+	if err := toml.Unmarshal(data, &cfgTOML); err != nil {
 		return nil, fmt.Errorf("failed to parse config: %w", err)
 	}
 
-	return &cfg, nil
+	cfg := &Config{
+		Timezone:          cfgTOML.Timezone,
+		WorkHoursStart:    cfgTOML.WorkHoursStart,
+		WorkHoursEnd:      cfgTOML.WorkHoursEnd,
+		CalendarProvider:  cfgTOML.CalendarProvider,
+		CalendarMode:      cfgTOML.CalendarMode,
+		LocalCalendarPath: cfgTOML.LocalCalendarPath,
+	}
+
+	// Parse durations
+	if cfgTOML.MeetingDuration != "" {
+		duration, err := time.ParseDuration(cfgTOML.MeetingDuration)
+		if err != nil {
+			return nil, fmt.Errorf("invalid meeting_duration: %w", err)
+		}
+		cfg.MeetingDuration = duration
+	}
+
+	if cfgTOML.BufferDuration != "" {
+		duration, err := time.ParseDuration(cfgTOML.BufferDuration)
+		if err != nil {
+			return nil, fmt.Errorf("invalid buffer_duration: %w", err)
+		}
+		cfg.BufferDuration = duration
+	}
+
+	// Apply defaults if not set
+	if cfg.MeetingDuration == 0 {
+		cfg.MeetingDuration = 30 * time.Minute
+	}
+	if cfg.BufferDuration == 0 {
+		cfg.BufferDuration = 15 * time.Minute
+	}
+	if cfg.CalendarMode == "" {
+		cfg.CalendarMode = "network"
+	}
+	if cfg.Timezone == "" {
+		cfg.Timezone = "UTC"
+	}
+	if cfg.CalendarProvider == "" {
+		cfg.CalendarProvider = "google"
+	}
+
+	return cfg, nil
 }
 
 // LoadOrCreate loads the config from the default path, creating it if it doesn't exist.
@@ -106,8 +164,25 @@ func (c *Config) Validate() error {
 		return fmt.Errorf("meeting_duration must be positive")
 	}
 
+	if c.BufferDuration < 0 {
+		return fmt.Errorf("buffer_duration must be non-negative")
+	}
+
 	if c.WorkHoursStart == "" || c.WorkHoursEnd == "" {
 		return fmt.Errorf("work hours start and end are required")
+	}
+
+	calendarMode := c.CalendarMode
+	if calendarMode == "" {
+		calendarMode = "network" // Default
+	}
+
+	if calendarMode != "network" && calendarMode != "local" {
+		return fmt.Errorf("calendar_mode must be 'network' or 'local'")
+	}
+
+	if calendarMode == "local" && c.LocalCalendarPath == "" {
+		return fmt.Errorf("local_calendar_path is required when calendar_mode is 'local'")
 	}
 
 	_, err := c.WorkHours()
@@ -131,11 +206,13 @@ func (c *Config) Save(path string) error {
 // Default returns a default configuration.
 func Default() *Config {
 	return &Config{
-		Timezone:        "UTC",
-		MeetingDuration: 30 * time.Minute,
-		WorkHoursStart:  "09:00",
-		WorkHoursEnd:    "17:00",
+		Timezone:         "UTC",
+		MeetingDuration:  30 * time.Minute,
+		BufferDuration:   15 * time.Minute,
+		WorkHoursStart:   "09:00",
+		WorkHoursEnd:     "17:00",
 		CalendarProvider: "google",
+		CalendarMode:     "network",
 	}
 }
 
@@ -148,4 +225,3 @@ func readFile(path string) ([]byte, error) {
 func writeFile(path string, data []byte) error {
 	return os.WriteFile(path, data, 0600)
 }
-

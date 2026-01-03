@@ -11,10 +11,11 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/robgyiv/availability/internal/config"
-	"github.com/robgyiv/availability/internal/engine"
+	"github.com/robgyiv/availability/pkg/engine"
 	applecal "github.com/robgyiv/availability/internal/calendar/apple"
 	cal "github.com/robgyiv/availability/internal/calendar"
 	googlecal "github.com/robgyiv/availability/internal/calendar/google"
+	localcal "github.com/robgyiv/availability/internal/calendar/local"
 )
 
 // newCopyCmd creates the copy command.
@@ -50,20 +51,34 @@ func runCopy(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("invalid work hours: %w", err)
 	}
 
-	// Create calendar provider based on config
-	providerName := cfg.CalendarProvider
-	if providerName == "" {
-		providerName = "google" // Default
+	// Create calendar provider based on config mode
+	var provider cal.Provider
+	calendarMode := cfg.CalendarMode
+	if calendarMode == "" {
+		calendarMode = "network" // Default
 	}
 
-	var provider cal.Provider
-	switch providerName {
-	case "google":
-		provider = googlecal.NewProvider()
-	case "apple", "icloud":
-		provider = applecal.NewProvider()
-	default:
-		return fmt.Errorf("unknown provider: %s (supported: google, apple)", providerName)
+	if calendarMode == "local" {
+		// Local mode: read from .ics file
+		if cfg.LocalCalendarPath == "" {
+			return fmt.Errorf("local_calendar_path is required when calendar_mode is 'local'")
+		}
+		provider = localcal.NewProviderFromPath(cfg.LocalCalendarPath)
+	} else {
+		// Network mode: use HTTP-based providers
+		providerName := cfg.CalendarProvider
+		if providerName == "" {
+			providerName = "google" // Default
+		}
+
+		switch providerName {
+		case "google":
+			provider = googlecal.NewProvider()
+		case "apple", "icloud":
+			provider = applecal.NewProvider()
+		default:
+			return fmt.Errorf("unknown provider: %s (supported: google, apple)", providerName)
+		}
 	}
 
 	// Try to load existing token
@@ -98,6 +113,7 @@ func runCopy(cmd *cobra.Command, args []string) error {
 		endDate,
 		workHours,
 		cfg.MeetingDuration,
+		cfg.BufferDuration,
 	)
 
 	// Group by day

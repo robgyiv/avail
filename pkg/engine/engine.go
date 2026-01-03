@@ -8,13 +8,14 @@ import (
 )
 
 // CalculateAvailability computes free time blocks from calendar events.
-// It takes events, a date range, work hours, and meeting duration to determine
-// available time slots.
+// It takes events, a date range, work hours, meeting duration, and buffer duration
+// to determine available time slots.
 func CalculateAvailability(
 	events []availability.Event,
 	startDate, endDate time.Time,
 	workHours availability.WorkHours,
 	meetingDuration time.Duration,
+	bufferDuration time.Duration,
 ) []availability.TimeBlock {
 	// Sort events by start time
 	sortedEvents := make([]availability.Event, len(events))
@@ -35,7 +36,7 @@ func CalculateAvailability(
 		dayEvents := filterEventsForDay(sortedEvents, currentDate)
 
 		// Calculate free time blocks for this day
-		dayBlocks := calculateFreeBlocksForDay(dayStart, dayEnd, dayEvents, meetingDuration)
+		dayBlocks := calculateFreeBlocksForDay(dayStart, dayEnd, dayEvents, meetingDuration, bufferDuration)
 		freeBlocks = append(freeBlocks, dayBlocks...)
 
 		// Move to next day
@@ -71,6 +72,7 @@ func calculateFreeBlocksForDay(
 	dayStart, dayEnd time.Time,
 	events []availability.Event,
 	meetingDuration time.Duration,
+	bufferDuration time.Duration,
 ) []availability.TimeBlock {
 	var blocks []availability.TimeBlock
 
@@ -105,9 +107,14 @@ func calculateFreeBlocksForDay(
 			}
 		}
 
-		// Move current time to the end of the event (or later if events overlap)
-		if eventEnd.After(currentTime) {
-			currentTime = eventEnd
+		// Move current time to the end of the event plus buffer (or later if events overlap)
+		// Ensure we don't go beyond dayEnd
+		nextTime := eventEnd.Add(bufferDuration)
+		if nextTime.After(dayEnd) {
+			nextTime = dayEnd
+		}
+		if nextTime.After(currentTime) {
+			currentTime = nextTime
 		}
 	}
 
