@@ -12,6 +12,8 @@ import (
 
 	"github.com/robgyiv/availability/internal/config"
 	"github.com/robgyiv/availability/internal/engine"
+	applecal "github.com/robgyiv/availability/internal/calendar/apple"
+	cal "github.com/robgyiv/availability/internal/calendar"
 	googlecal "github.com/robgyiv/availability/internal/calendar/google"
 )
 
@@ -48,14 +50,33 @@ func runCopy(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("invalid work hours: %w", err)
 	}
 
-	// Create calendar provider
-	provider := googlecal.NewProvider()
+	// Create calendar provider based on config
+	providerName := cfg.CalendarProvider
+	if providerName == "" {
+		providerName = "google" // Default
+	}
+
+	var provider cal.Provider
+	switch providerName {
+	case "google":
+		provider = googlecal.NewProvider()
+	case "apple", "icloud":
+		provider = applecal.NewProvider()
+	default:
+		return fmt.Errorf("unknown provider: %s (supported: google, apple)", providerName)
+	}
 
 	// Try to load existing token
 	if !provider.IsAuthenticated() {
-		if err := provider.LoadToken(ctx); err != nil {
+		// Try to load token (provider-specific)
+		if loadable, ok := provider.(interface{ LoadToken(context.Context) error }); ok {
+			if err := loadable.LoadToken(ctx); err != nil {
+				fmt.Fprintf(os.Stderr, "Not authenticated. Please run 'avail auth' first.\n")
+				return err
+			}
+		} else {
 			fmt.Fprintf(os.Stderr, "Not authenticated. Please run 'avail auth' first.\n")
-			return err
+			return fmt.Errorf("not authenticated")
 		}
 	}
 
