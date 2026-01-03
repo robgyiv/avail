@@ -13,6 +13,7 @@ import (
 	applecal "github.com/robgyiv/availability/internal/calendar/apple"
 	cal "github.com/robgyiv/availability/internal/calendar"
 	googlecal "github.com/robgyiv/availability/internal/calendar/google"
+	localcal "github.com/robgyiv/availability/internal/calendar/local"
 )
 
 // newAuthCmd creates the auth command.
@@ -25,8 +26,9 @@ func newAuthCmd() *cobra.Command {
 Supported providers:
   - google: Google Calendar (OAuth2)
   - apple: Apple/iCloud Calendar (public calendar URL)
+  - local: Local .ics file (read from local file system)
 
-The authentication token/URL will be stored securely in your system keyring.
+The authentication token/URL/path will be stored securely in your system keyring.
 
 For Google Calendar:
   1. Go to https://console.cloud.google.com/apis/credentials
@@ -45,8 +47,9 @@ For Apple/iCloud Calendar:
 		RunE: runAuth,
 	}
 
-	cmd.Flags().StringP("provider", "p", "", "Calendar provider (google, apple)")
+	cmd.Flags().StringP("provider", "p", "", "Calendar provider (google, apple, local)")
 	cmd.Flags().StringP("url", "u", "", "Public calendar URL (for Apple provider)")
+	cmd.Flags().StringP("file", "f", "", "Path to .ics file (for local provider)")
 
 	return cmd
 }
@@ -119,8 +122,41 @@ func runAuth(cmd *cobra.Command, args []string) error {
 
 		provider = applecal.NewProviderFromURL(calendarURL)
 
+	case "local":
+		// Get local .ics file path
+		icsPath, _ := cmd.Flags().GetString("file")
+		if icsPath == "" {
+			// Prompt for file path
+			fmt.Print("Enter path to your .ics calendar file: ")
+			reader := bufio.NewReader(os.Stdin)
+			input, err := reader.ReadString('\n')
+			if err != nil {
+				return fmt.Errorf("failed to read input: %w", err)
+			}
+			icsPath = strings.TrimSpace(input)
+		}
+
+		if icsPath == "" {
+			fmt.Fprintf(os.Stderr, "Error: Calendar file path required.\n\n")
+			fmt.Fprintf(os.Stderr, "Provide the path to a local .ics file.\n")
+			fmt.Fprintf(os.Stderr, "You can export your calendar from Apple Calendar, Google Calendar, or any calendar app.\n\n")
+			fmt.Fprintf(os.Stderr, "Or use: avail auth --provider local --file <path-to-calendar.ics>\n")
+			return fmt.Errorf("calendar file path required")
+		}
+
+		// Expand ~ to home directory
+		if strings.HasPrefix(icsPath, "~/") {
+			homeDir, err := os.UserHomeDir()
+			if err != nil {
+				return fmt.Errorf("failed to get home directory: %w", err)
+			}
+			icsPath = strings.Replace(icsPath, "~", homeDir, 1)
+		}
+
+		provider = localcal.NewProviderFromPath(icsPath)
+
 	default:
-		return fmt.Errorf("unknown provider: %s (supported: google, apple)", providerName)
+		return fmt.Errorf("unknown provider: %s (supported: google, apple, local)", providerName)
 	}
 
 	// Authenticate
