@@ -70,6 +70,69 @@ work_hours_end = "17:00"
 calendar_provider = "google"
 ```
 
+### Authentication
+
+Before using `avail`, you need to authenticate with your calendar provider. The tool supports:
+
+- **Google Calendar** (OAuth2)
+- **Apple/iCloud Calendar** (public calendar URL - privacy-first, read-only)
+
+#### Google Calendar Setup
+
+1. **Create OAuth credentials:**
+   - Go to [Google Cloud Console](https://console.cloud.google.com/apis/credentials)
+   - Create an OAuth 2.0 Client ID (Application type: Desktop app)
+   - Note your Client ID and Client Secret
+
+2. **Set environment variables:**
+   ```bash
+   export GOOGLE_CLIENT_ID="your-client-id"
+   export GOOGLE_CLIENT_SECRET="your-client-secret"
+   ```
+
+3. **Authenticate:**
+   ```bash
+   avail auth --provider google
+   ```
+
+   This will open a browser window for OAuth authentication. The token will be stored securely in your system keyring.
+
+#### Apple/iCloud Calendar Setup (Public Calendar - Privacy-First)
+
+Apple/iCloud calendars use public calendar URLs for privacy-first, read-only access. No app-specific passwords needed!
+
+1. **Get your public calendar URL:**
+   - Open the Calendar app on your iPhone or Mac
+   - Tap/click the "Calendars" button at the bottom
+   - Tap/click the info icon (ℹ️) next to the calendar you want to use
+   - Toggle on "Public Calendar"
+   - Tap/click "Share Link" to copy the public calendar URL
+   - The URL will look like: `webcal://p[numbers]-calendars.icloud.com/published/2/[long-string]`
+
+2. **Authenticate:**
+   ```bash
+   avail auth --provider apple
+   ```
+   
+   When prompted, paste your public calendar URL. Or use:
+   ```bash
+   avail auth --provider apple --url "your-public-calendar-url"
+   ```
+
+   The URL will be stored securely in your system keyring.
+
+**Privacy Note:** Public calendars are read-only and don't require any credentials. Anyone with the URL can view your calendar, so only share it with people you trust. You can revoke access anytime by turning off "Public Calendar" in the Calendar app.
+
+#### Switching Providers
+
+To switch between providers, update your config file:
+
+```toml
+calendar_provider = "apple"  # or "google"
+```
+
+Then authenticate with the new provider using `avail auth --provider <provider>`.
+
 ### Show Availability
 
 Display your availability for the next 5 days:
@@ -95,7 +158,7 @@ Fri 15 Mar
 Time zone: UTC
 ```
 
-**Note:** Currently requires Google Calendar authentication to be set up manually. The `avail auth` command is planned but not yet implemented.
+**Note:** Requires calendar authentication. See the [Authentication](#authentication) section below.
 
 ### Copy to Clipboard
 
@@ -135,10 +198,11 @@ $ avail copy --help
 - ✅ Configuration system
 - ✅ `avail show` command
 - ✅ `avail copy` command
-- ✅ Google Calendar API integration structure
+- ✅ `avail auth` command (OAuth flow for Google, public URL for Apple)
+- ✅ Google Calendar API integration
+- ✅ Apple/iCloud Calendar integration (public calendar URLs - privacy-first)
 
 **In Progress / Planned:**
-- ⏳ `avail auth` command (OAuth flow)
 - ⏳ `avail link` command (shareable links)
 - ⏳ `avail propose` command (interactive TUI for time selection)
 
