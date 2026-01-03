@@ -1,14 +1,37 @@
-## Calendar availability tool
+# avail
 
-A reliable way to generate human-friendly availability text from a real calendar, without forcing the recipient into a tool.
+Generate up-to-date availability you can share — without booking links.
 
-Key properties:
-- Host-centric
-- Read-only calendar integration
-- Zero commitment required from the guest
-- Works in email, Slack, WhatsApp, etc.
+## What avail is
+- A local-first availability generator
+- Privacy-first by design
+- Works in your terminal
+- Produces text, links, and proposals
 
-Implemented first as a TUI to validate functionality and core library, then extended into a SaaS web application.
+## What avail is not
+- A scheduler
+- A booking system
+- A calendar writer
+- A background sync service
+
+## How it works
+1. Read your calendar (locally where possible)
+2. Derive free/busy availability
+3. Generate human-friendly output
+4. Optionally publish a live link
+
+## Privacy model
+- Event details never leave your machine
+- Only derived availability is shared
+- Read-only access only
+
+## Paid features
+- Shareable links
+- Longer expiry
+- Multiple active links
+
+## Philosophy
+Avail assists conversations — it does not automate them.
 
 ---
 
