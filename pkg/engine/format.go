@@ -46,3 +46,4 @@ func FormatDate(date time.Time, location *time.Location) string {
 func formatTime(t time.Time) string {
 	return t.Format("15:04")
 }
+
