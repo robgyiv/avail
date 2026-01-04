@@ -195,7 +195,16 @@ Avail can fetch events from any publicly accessible calendar URL that serves iCa
 
 Use a local `.ics` file on your filesystem.
 
-1. **Configure provider:**
+To export your calendar:
+
+1. Open your calendar application:
+   - macOS: Calendar.app (File > Export > Export...)
+   - Google Calendar: Settings > Export calendar
+   - Other: Check your calendar app's export options
+
+2. Export as .ics format and save to: /Users/robbie/.config/avail/calendar.ics
+
+3. **Configure provider:**
    Edit `~/.config/avail/config.toml`:
    ```toml
    calendar_provider = "local"
@@ -207,7 +216,7 @@ Use a local `.ics` file on your filesystem.
    local_calendar_path = "~/Desktop/calendar.ics"
    ```
 
-2. **Use directly:**
+4. **Use directly:**
    ```bash
    avail show
    ```
