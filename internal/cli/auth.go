@@ -1,7 +1,6 @@
 package cli
 
 import (
-	"bufio"
 	"context"
 	"fmt"
 	"os"
@@ -9,11 +8,11 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/robgyiv/availability/internal/config"
-	urlcal "github.com/robgyiv/availability/internal/calendar/url"
 	cal "github.com/robgyiv/availability/internal/calendar"
 	googlecal "github.com/robgyiv/availability/internal/calendar/google"
 	localcal "github.com/robgyiv/availability/internal/calendar/local"
+	urlcal "github.com/robgyiv/availability/internal/calendar/url"
+	"github.com/robgyiv/availability/internal/config"
 )
 
 // newAuthCmd creates the auth command.
@@ -21,20 +20,16 @@ func newAuthCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "auth",
 		Short: "Authenticate with calendar provider",
-		Long: `Authenticate with your calendar provider to enable calendar access.
+		Long: `Authenticate with your calendar provider based on your configuration.
 
-Supported providers:
-  - google: Google Calendar (OAuth2)
-  - network: Public calendar URL (any service serving iCalendar format)
-  - local: Local .ics file (read from local file system)
+The provider is determined by the calendar_provider setting in your config file.
+Credentials are stored securely in your system keyring.
 
-The authentication token/URL/path will be stored securely in your system keyring.`,
+Before running this command, ensure your config file (~/.config/avail/config.toml) has:
+  - calendar_provider set to "google", "network", or "local"
+  - Provider-specific settings (calendar_url for network, local_calendar_path for local)`,
 		RunE: runAuth,
 	}
-
-	cmd.Flags().StringP("provider", "p", "", "Calendar provider (google, network, local)")
-	cmd.Flags().StringP("url", "u", "", "Public calendar URL (for network provider)")
-	cmd.Flags().StringP("file", "f", "", "Path to .ics file (for local provider)")
 
 	return cmd
 }
@@ -42,22 +37,19 @@ The authentication token/URL/path will be stored securely in your system keyring
 func runAuth(cmd *cobra.Command, args []string) error {
 	ctx := context.Background()
 
-	// Load config to get default provider
+	// Load config
 	cfg, err := config.LoadOrCreate()
 	if err != nil {
 		return fmt.Errorf("failed to load config: %w", err)
 	}
 
-	// Get provider from flag or config
-	providerName, _ := cmd.Flags().GetString("provider")
+	// Get provider from config only
+	providerName := cfg.CalendarProvider
 	if providerName == "" {
-		providerName = cfg.CalendarProvider
-		if providerName == "" {
-			providerName = "google" // Default
-		}
+		return fmt.Errorf("calendar_provider not set in config file\n\nSet calendar_provider in ~/.config/avail/config.toml:\n  calendar_provider = \"google\"  # or \"network\" or \"local\"")
 	}
 
-	// Create provider and authenticate based on provider
+	// Create provider and authenticate based on provider from config
 	var provider cal.Provider
 	switch providerName {
 	case "google":
@@ -80,55 +72,19 @@ func runAuth(cmd *cobra.Command, args []string) error {
 		provider = googlecal.NewProvider()
 
 	case "network":
-		// Get public calendar URL
-		calendarURL, _ := cmd.Flags().GetString("url")
+		// Get public calendar URL from config
+		calendarURL := cfg.CalendarURL
 		if calendarURL == "" {
-			// Check config
-			calendarURL = cfg.CalendarURL
-			if calendarURL == "" {
-				// Prompt for URL
-				fmt.Print("Enter public calendar URL (webcal:// or https://): ")
-				reader := bufio.NewReader(os.Stdin)
-				input, err := reader.ReadString('\n')
-				if err != nil {
-					return fmt.Errorf("failed to read input: %w", err)
-				}
-				calendarURL = strings.TrimSpace(input)
-			}
-		}
-
-		if calendarURL == "" {
-			fmt.Fprintf(os.Stderr, "Error: Public calendar URL required.\n\n")
-			fmt.Fprintf(os.Stderr, "Supported sources:\n")
-			fmt.Fprintf(os.Stderr, "  - Apple/iCloud: Calendar app > Calendars > Info icon > Public Calendar > Share Link\n")
-			fmt.Fprintf(os.Stderr, "  - Google Calendar: Settings > Integrate calendar > Public URL\n")
-			fmt.Fprintf(os.Stderr, "  - Other services: Check your calendar provider's documentation\n\n")
-			fmt.Fprintf(os.Stderr, "Or use: avail auth --provider network --url <your-calendar-url>\n")
-			return fmt.Errorf("public calendar URL required")
+			return fmt.Errorf("calendar_url not set in config file\n\nSet calendar_url in ~/.config/avail/config.toml:\n  calendar_url = \"https://calendar.example.com/public.ics\"")
 		}
 
 		provider = urlcal.NewProviderFromURL(calendarURL)
 
 	case "local":
-		// Get local .ics file path
-		icsPath, _ := cmd.Flags().GetString("file")
+		// Get local .ics file path from config
+		icsPath := cfg.LocalCalendarPath
 		if icsPath == "" {
-			// Prompt for file path
-			fmt.Print("Enter path to your .ics calendar file: ")
-			reader := bufio.NewReader(os.Stdin)
-			input, err := reader.ReadString('\n')
-			if err != nil {
-				return fmt.Errorf("failed to read input: %w", err)
-			}
-			icsPath = strings.TrimSpace(input)
-		}
-
-		if icsPath == "" {
-			fmt.Fprintf(os.Stderr, "Error: Calendar file path required.\n\n")
-			fmt.Fprintf(os.Stderr, "Provide the path to a local .ics file.\n")
-			fmt.Fprintf(os.Stderr, "You can export your calendar from Apple Calendar, Google Calendar, or any calendar app.\n\n")
-			fmt.Fprintf(os.Stderr, "Or use: avail auth --provider local --file <path-to-calendar.ics>\n")
-			return fmt.Errorf("calendar file path required")
+			return fmt.Errorf("local_calendar_path not set in config file\n\nSet local_calendar_path in ~/.config/avail/config.toml:\n  local_calendar_path = \"/path/to/calendar.ics\"")
 		}
 
 		// Expand ~ to home directory
@@ -143,10 +99,10 @@ func runAuth(cmd *cobra.Command, args []string) error {
 		provider = localcal.NewProviderFromPath(icsPath)
 
 	default:
-		return fmt.Errorf("unknown provider: %s (supported: google, network, local)", providerName)
+		return fmt.Errorf("unknown provider: %s (supported: google, network, local)\n\nSet calendar_provider in ~/.config/avail/config.toml", providerName)
 	}
 
-	// Authenticate
+	// Authenticate (stores credentials in keyring)
 	if err := provider.Authenticate(ctx); err != nil {
 		return fmt.Errorf("authentication failed: %w", err)
 	}
@@ -154,4 +110,3 @@ func runAuth(cmd *cobra.Command, args []string) error {
 	fmt.Printf("✓ Calendar connected (read-only) - Provider: %s\n", providerName)
 	return nil
 }
-

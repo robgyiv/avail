@@ -8,12 +8,12 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/robgyiv/availability/internal/config"
-	"github.com/robgyiv/availability/pkg/engine"
-	urlcal "github.com/robgyiv/availability/internal/calendar/url"
 	cal "github.com/robgyiv/availability/internal/calendar"
 	googlecal "github.com/robgyiv/availability/internal/calendar/google"
 	localcal "github.com/robgyiv/availability/internal/calendar/local"
+	urlcal "github.com/robgyiv/availability/internal/calendar/url"
+	"github.com/robgyiv/availability/internal/config"
+	"github.com/robgyiv/availability/pkg/engine"
 )
 
 // newShowCmd creates the show command.
@@ -53,7 +53,12 @@ func runShow(cmd *cobra.Command, args []string) error {
 	var provider cal.Provider
 	providerName := cfg.CalendarProvider
 	if providerName == "" {
-		providerName = "google" // Default
+		// Migration: if LocalCalendarPath is set, assume local provider
+		if cfg.LocalCalendarPath != "" {
+			providerName = "local"
+		} else {
+			providerName = "google" // Default
+		}
 	}
 
 	switch providerName {
@@ -67,24 +72,26 @@ func runShow(cmd *cobra.Command, args []string) error {
 		}
 	case "local":
 		if cfg.LocalCalendarPath == "" {
-			return fmt.Errorf("local_calendar_path is required when calendar_provider is 'local'")
+			return fmt.Errorf("local_calendar_path not set in config file\n\nSet local_calendar_path in ~/.config/avail/config.toml:\n  local_calendar_path = \"/path/to/calendar.ics\"")
 		}
 		provider = localcal.NewProviderFromPath(cfg.LocalCalendarPath)
 	default:
 		return fmt.Errorf("unknown provider: %s (supported: google, network, local)", providerName)
 	}
 
-	// Try to load existing token, otherwise authenticate
-	if !provider.IsAuthenticated() {
-		// Try to load token (provider-specific)
-		if loadable, ok := provider.(interface{ LoadToken(context.Context) error }); ok {
-			if err := loadable.LoadToken(ctx); err != nil {
+	// For providers that need authentication (google, network), load credentials from keyring
+	if providerName != "local" {
+		if !provider.IsAuthenticated() {
+			// Try to load token (provider-specific)
+			if loadable, ok := provider.(interface{ LoadToken(context.Context) error }); ok {
+				if err := loadable.LoadToken(ctx); err != nil {
+					fmt.Fprintf(os.Stderr, "Not authenticated. Please run 'avail auth' first.\n")
+					return err
+				}
+			} else {
 				fmt.Fprintf(os.Stderr, "Not authenticated. Please run 'avail auth' first.\n")
-				return err
+				return fmt.Errorf("not authenticated")
 			}
-		} else {
-			fmt.Fprintf(os.Stderr, "Not authenticated. Please run 'avail auth' first.\n")
-			return fmt.Errorf("not authenticated")
 		}
 	}
 
@@ -128,4 +135,3 @@ func runShow(cmd *cobra.Command, args []string) error {
 
 	return nil
 }
-

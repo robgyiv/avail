@@ -81,9 +81,11 @@ On first run, `avail` will create a default configuration file at `~/.config/ava
 - `meeting_duration` - Default meeting duration (default: 30 minutes)
 - `work_hours_start` - Start of work day (default: "09:00")
 - `work_hours_end` - End of work day (default: "17:00")
-- `calendar_provider` - Calendar provider (default: "google")
+- `calendar_provider` - Calendar provider: `"google"`, `"network"`, or `"local"` (default: "google")
+- `calendar_url` - Public calendar URL (required when `calendar_provider = "network"`)
+- `local_calendar_path` - Path to local .ics file (required when `calendar_provider = "local"`)
 
-Example config:
+Example config for Google Calendar:
 
 ```toml
 timezone = "America/New_York"
@@ -93,19 +95,41 @@ work_hours_end = "17:00"
 calendar_provider = "google"
 ```
 
+Example config for public calendar URL:
+
+```toml
+calendar_provider = "network"
+calendar_url = "https://calendar.example.com/public.ics"
+```
+
+Example config for local file:
+
+```toml
+calendar_provider = "local"
+local_calendar_path = "~/Desktop/calendar.ics"
+```
+
 ### Authentication
 
-Before using `avail`, you need to authenticate with your calendar provider. The tool supports:
+Before using `avail`, you need to configure and authenticate with your calendar provider. The tool supports:
 
 - **Google Calendar** (OAuth2)
 - **Public Calendar URLs** (any service serving iCalendar format - privacy-first, read-only)
 - **Local Calendar Files** (.ics files)
 
+**Configuration-first approach:** Set your provider in the config file first, then run `avail auth` to authenticate.
+
 #### Google Calendar Setup (OAuth2)
 
 Avail requires you to create your own OAuth application for privacy. We don't provide shared credentials to ensure your calendar data never passes through third-party servers when using this library.
 
-1. **Create OAuth credentials:**
+1. **Configure provider:**
+   Edit `~/.config/avail/config.toml`:
+   ```toml
+   calendar_provider = "google"
+   ```
+
+2. **Create OAuth credentials:**
    - Go to [Google Cloud Console](https://console.cloud.google.com/apis/credentials)
    - Create a new project (or select existing)
    - Enable the Google Calendar API
@@ -114,15 +138,15 @@ Avail requires you to create your own OAuth application for privacy. We don't pr
      - Name: "Avail CLI" (or any name you prefer)
    - Note your Client ID and Client Secret
 
-2. **Set environment variables:**
+3. **Set environment variables:**
    ```bash
    export GOOGLE_CLIENT_ID="your-client-id"
    export GOOGLE_CLIENT_SECRET="your-client-secret"
    ```
 
-3. **Authenticate:**
+4. **Authenticate:**
    ```bash
-   avail auth --provider google
+   avail auth
    ```
    
    This opens a browser for OAuth authentication. The token is stored securely in your system keyring.
@@ -141,21 +165,24 @@ Avail can fetch events from any publicly accessible calendar URL that serves iCa
 
 **Setup:**
 
-1. **Get your public calendar URL:**
+1. **Configure provider:**
+   Edit `~/.config/avail/config.toml`:
+   ```toml
+   calendar_provider = "network"
+   calendar_url = "https://calendar.example.com/public.ics"
+   ```
+   
+   To get your public calendar URL:
    - **Apple/iCloud**: Open Calendar app → Calendars → Info icon → Toggle "Public Calendar" → "Share Link"
    - **Google Calendar**: Calendar Settings → Integrate calendar → Public URL
    - **Other services**: Check your calendar provider's documentation for public feed URLs
 
 2. **Authenticate:**
    ```bash
-   avail auth --provider network --url "https://calendar.example.com/public.ics"
+   avail auth
    ```
    
-   Or configure in `config.toml`:
-   ```toml
-   calendar_provider = "network"
-   calendar_url = "https://calendar.example.com/public.ics"
-   ```
+   The URL is validated and stored securely in your system keyring.
 
 **Privacy Note:** Only works with calendars explicitly made public. Private calendars require OAuth authentication (see Google Calendar setup). Public calendar URLs are readable by anyone with the URL.
 
@@ -164,15 +191,28 @@ Avail can fetch events from any publicly accessible calendar URL that serves iCa
 - `http://` URLs (if server doesn't support HTTPS)
 - `webcal://` URLs (automatically converted to `https://`)
 
-#### Switching Providers
+#### Local Calendar File Setup
 
-To switch between providers, update your config file:
+Use a local `.ics` file on your filesystem.
 
-```toml
-calendar_provider = "network"  # or "google" or "local"
-```
+1. **Configure provider:**
+   Edit `~/.config/avail/config.toml`:
+   ```toml
+   calendar_provider = "local"
+   local_calendar_path = "/path/to/calendar.ics"
+   ```
+   
+   You can use `~` to refer to your home directory:
+   ```toml
+   local_calendar_path = "~/Desktop/calendar.ics"
+   ```
 
-Then authenticate with the new provider using `avail auth --provider <provider>`.
+2. **Use directly:**
+   ```bash
+   avail show
+   ```
+   
+   No authentication needed - the file is read directly from the filesystem.
 
 ### Show Availability
 

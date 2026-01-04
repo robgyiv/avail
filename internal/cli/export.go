@@ -16,17 +16,16 @@ func newExportCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "export",
 		Short: "Show instructions for exporting calendar to .ics file",
-		Long: `Shows instructions for exporting your calendar to a local .ics file for use with local mode.
+		Long: `Shows instructions for exporting your calendar to a local .ics file for use with local provider.
 
 To export your calendar:
   1. Open your calendar application (Calendar.app on macOS, Google Calendar, etc.)
   2. Find the export option (typically File > Export or Settings)
   3. Export as .ics format
   4. Save the file
-  5. Use: avail auth --provider local --file <path-to-exported-file.ics>
+  5. Configure avail to use the local file in ~/.config/avail/config.toml
 
-Alternatively, you can use a public calendar URL with:
-  avail auth --provider network --url <your-public-calendar-url>`,
+Alternatively, you can use a public calendar URL by setting calendar_provider = "network" in your config.`,
 		RunE: runExport,
 	}
 
@@ -69,13 +68,14 @@ func runExport(cmd *cobra.Command, args []string) error {
 	fmt.Printf("   - Google Calendar: Settings > Export calendar\n")
 	fmt.Printf("   - Other: Check your calendar app's export options\n\n")
 	fmt.Printf("2. Export as .ics format and save to: %s\n\n", outputPath)
-	fmt.Printf("3. After exporting, configure avail:\n")
-	fmt.Printf("   avail auth --provider local --file %s\n\n", outputPath)
-	fmt.Printf("Or configure manually:\n")
+	fmt.Printf("3. Configure avail to use the local file.\n")
+	fmt.Printf("   Edit ~/.config/avail/config.toml:\n\n")
 	fmt.Printf("   calendar_provider = \"local\"\n")
 	fmt.Printf("   local_calendar_path = \"%s\"\n\n", outputPath)
-	fmt.Printf("Alternative: Use a public calendar URL instead:\n")
-	fmt.Printf("   avail auth --provider network --url <your-public-calendar-url>\n")
+	fmt.Printf("4. Use avail commands:\n")
+	fmt.Printf("   avail show\n\n")
+	fmt.Printf("Alternative: Use a public calendar URL by setting calendar_provider = \"network\"\n")
+	fmt.Printf("and calendar_url in your config file.\n")
 
 	return nil
 }
