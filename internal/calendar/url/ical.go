@@ -1,4 +1,4 @@
-package apple
+package url
 
 import (
 	"fmt"
@@ -126,7 +126,7 @@ func parseICalDateTime(value string) (time.Time, error) {
 		}
 	}
 
-	// Try RFC3339 format first (most common in iCloud)
+	// Try RFC3339 format first (common in many calendar systems)
 	if t, err := time.Parse(time.RFC3339, value); err == nil {
 		return t, nil
 	}
@@ -222,3 +222,4 @@ func unescapeICalText(text string) string {
 	text = strings.ReplaceAll(text, "\\\\", "\\")
 	return text
 }
+

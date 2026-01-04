@@ -10,7 +10,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/robgyiv/availability/internal/config"
-	applecal "github.com/robgyiv/availability/internal/calendar/apple"
+	urlcal "github.com/robgyiv/availability/internal/calendar/url"
 	cal "github.com/robgyiv/availability/internal/calendar"
 	googlecal "github.com/robgyiv/availability/internal/calendar/google"
 	localcal "github.com/robgyiv/availability/internal/calendar/local"
@@ -25,30 +25,15 @@ func newAuthCmd() *cobra.Command {
 
 Supported providers:
   - google: Google Calendar (OAuth2)
-  - apple: Apple/iCloud Calendar (public calendar URL)
+  - url: Public calendar URL (any service serving iCalendar format)
   - local: Local .ics file (read from local file system)
 
-The authentication token/URL/path will be stored securely in your system keyring.
-
-For Google Calendar:
-  1. Go to https://console.cloud.google.com/apis/credentials
-  2. Create OAuth 2.0 Client ID (Application type: Desktop app)
-  3. Set environment variables:
-     export GOOGLE_CLIENT_ID="your-client-id"
-     export GOOGLE_CLIENT_SECRET="your-client-secret"
-
-For Apple/iCloud Calendar:
-  1. Open Calendar app on your iPhone/Mac
-  2. Tap/click the "Calendars" button
-  3. Tap/click the info icon (ℹ️) next to the calendar you want to share
-  4. Toggle on "Public Calendar"
-  5. Tap/click "Share Link" to copy the public calendar URL
-  6. Provide this URL when prompted`,
+The authentication token/URL/path will be stored securely in your system keyring.`,
 		RunE: runAuth,
 	}
 
-	cmd.Flags().StringP("provider", "p", "", "Calendar provider (google, apple, local)")
-	cmd.Flags().StringP("url", "u", "", "Public calendar URL (for Apple provider)")
+	cmd.Flags().StringP("provider", "p", "", "Calendar provider (google, url, local)")
+	cmd.Flags().StringP("url", "u", "", "Public calendar URL (for url provider)")
 	cmd.Flags().StringP("file", "f", "", "Path to .ics file (for local provider)")
 
 	return cmd
@@ -94,33 +79,35 @@ func runAuth(cmd *cobra.Command, args []string) error {
 
 		provider = googlecal.NewProvider()
 
-	case "apple", "icloud":
+	case "url":
 		// Get public calendar URL
 		calendarURL, _ := cmd.Flags().GetString("url")
 		if calendarURL == "" {
-			// Prompt for URL
-			fmt.Print("Enter your public iCloud calendar URL (webcal:// or https://): ")
-			reader := bufio.NewReader(os.Stdin)
-			input, err := reader.ReadString('\n')
-			if err != nil {
-				return fmt.Errorf("failed to read input: %w", err)
+			// Check config
+			calendarURL = cfg.CalendarURL
+			if calendarURL == "" {
+				// Prompt for URL
+				fmt.Print("Enter public calendar URL (webcal:// or https://): ")
+				reader := bufio.NewReader(os.Stdin)
+				input, err := reader.ReadString('\n')
+				if err != nil {
+					return fmt.Errorf("failed to read input: %w", err)
+				}
+				calendarURL = strings.TrimSpace(input)
 			}
-			calendarURL = strings.TrimSpace(input)
 		}
 
 		if calendarURL == "" {
 			fmt.Fprintf(os.Stderr, "Error: Public calendar URL required.\n\n")
-			fmt.Fprintf(os.Stderr, "To get your public calendar URL:\n")
-			fmt.Fprintf(os.Stderr, "1. Open Calendar app on your iPhone/Mac\n")
-			fmt.Fprintf(os.Stderr, "2. Tap/click the 'Calendars' button\n")
-			fmt.Fprintf(os.Stderr, "3. Tap/click the info icon (ℹ️) next to the calendar you want to share\n")
-			fmt.Fprintf(os.Stderr, "4. Toggle on 'Public Calendar'\n")
-			fmt.Fprintf(os.Stderr, "5. Tap/click 'Share Link' to copy the URL\n\n")
-			fmt.Fprintf(os.Stderr, "Or use: avail auth --provider apple --url <your-calendar-url>\n")
+			fmt.Fprintf(os.Stderr, "Supported sources:\n")
+			fmt.Fprintf(os.Stderr, "  - Apple/iCloud: Calendar app > Calendars > Info icon > Public Calendar > Share Link\n")
+			fmt.Fprintf(os.Stderr, "  - Google Calendar: Settings > Integrate calendar > Public URL\n")
+			fmt.Fprintf(os.Stderr, "  - Other services: Check your calendar provider's documentation\n\n")
+			fmt.Fprintf(os.Stderr, "Or use: avail auth --provider url --url <your-calendar-url>\n")
 			return fmt.Errorf("public calendar URL required")
 		}
 
-		provider = applecal.NewProviderFromURL(calendarURL)
+		provider = urlcal.NewProviderFromURL(calendarURL)
 
 	case "local":
 		// Get local .ics file path
@@ -156,7 +143,7 @@ func runAuth(cmd *cobra.Command, args []string) error {
 		provider = localcal.NewProviderFromPath(icsPath)
 
 	default:
-		return fmt.Errorf("unknown provider: %s (supported: google, apple, local)", providerName)
+		return fmt.Errorf("unknown provider: %s (supported: google, url, local)", providerName)
 	}
 
 	// Authenticate

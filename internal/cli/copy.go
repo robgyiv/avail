@@ -12,7 +12,7 @@ import (
 
 	"github.com/robgyiv/availability/internal/config"
 	"github.com/robgyiv/availability/pkg/engine"
-	applecal "github.com/robgyiv/availability/internal/calendar/apple"
+	urlcal "github.com/robgyiv/availability/internal/calendar/url"
 	cal "github.com/robgyiv/availability/internal/calendar"
 	googlecal "github.com/robgyiv/availability/internal/calendar/google"
 	localcal "github.com/robgyiv/availability/internal/calendar/local"
@@ -74,10 +74,14 @@ func runCopy(cmd *cobra.Command, args []string) error {
 		switch providerName {
 		case "google":
 			provider = googlecal.NewProvider()
-		case "apple", "icloud":
-			provider = applecal.NewProvider()
+		case "url":
+			if cfg.CalendarURL != "" {
+				provider = urlcal.NewProviderFromURL(cfg.CalendarURL)
+			} else {
+				provider = urlcal.NewProvider()
+			}
 		default:
-			return fmt.Errorf("unknown provider: %s (supported: google, apple)", providerName)
+			return fmt.Errorf("unknown provider: %s (supported: google, url)", providerName)
 		}
 	}
 

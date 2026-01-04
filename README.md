@@ -98,13 +98,20 @@ calendar_provider = "google"
 Before using `avail`, you need to authenticate with your calendar provider. The tool supports:
 
 - **Google Calendar** (OAuth2)
-- **Apple/iCloud Calendar** (public calendar URL - privacy-first, read-only)
+- **Public Calendar URLs** (any service serving iCalendar format - privacy-first, read-only)
+- **Local Calendar Files** (.ics files)
 
-#### Google Calendar Setup
+#### Google Calendar Setup (OAuth2)
+
+Avail requires you to create your own OAuth application for privacy. We don't provide shared credentials to ensure your calendar data never passes through third-party servers when using this library.
 
 1. **Create OAuth credentials:**
    - Go to [Google Cloud Console](https://console.cloud.google.com/apis/credentials)
-   - Create an OAuth 2.0 Client ID (Application type: Desktop app)
+   - Create a new project (or select existing)
+   - Enable the Google Calendar API
+   - Create OAuth 2.0 Client ID
+     - Application type: **Desktop app**
+     - Name: "Avail CLI" (or any name you prefer)
    - Note your Client ID and Client Secret
 
 2. **Set environment variables:**
@@ -117,41 +124,52 @@ Before using `avail`, you need to authenticate with your calendar provider. The 
    ```bash
    avail auth --provider google
    ```
+   
+   This opens a browser for OAuth authentication. The token is stored securely in your system keyring.
 
-   This will open a browser window for OAuth authentication. The token will be stored securely in your system keyring.
+**Privacy:** Your OAuth credentials are used only by your local CLI. Calendar data is processed locally and never sent to any third-party servers.
 
-#### Apple/iCloud Calendar Setup (Public Calendar - Privacy-First)
+#### Public Calendar URL Setup
 
-Apple/iCloud calendars use public calendar URLs for privacy-first, read-only access. No app-specific passwords needed!
+Avail can fetch events from any publicly accessible calendar URL that serves iCalendar (.ics) format.
+
+**Supported sources:**
+- Apple/iCloud public calendars
+- Google Calendar public feeds
+- CalDAV server public calendars
+- Any HTTP/HTTPS endpoint serving `.ics` format
+
+**Setup:**
 
 1. **Get your public calendar URL:**
-   - Open the Calendar app on your iPhone or Mac
-   - Tap/click the "Calendars" button at the bottom
-   - Tap/click the info icon (ℹ️) next to the calendar you want to use
-   - Toggle on "Public Calendar"
-   - Tap/click "Share Link" to copy the public calendar URL
-   - The URL will look like: `webcal://p[numbers]-calendars.icloud.com/published/2/[long-string]`
+   - **Apple/iCloud**: Open Calendar app → Calendars → Info icon → Toggle "Public Calendar" → "Share Link"
+   - **Google Calendar**: Calendar Settings → Integrate calendar → Public URL
+   - **Other services**: Check your calendar provider's documentation for public feed URLs
 
 2. **Authenticate:**
    ```bash
-   avail auth --provider apple
+   avail auth --provider url --url "https://calendar.example.com/public.ics"
    ```
    
-   When prompted, paste your public calendar URL. Or use:
-   ```bash
-   avail auth --provider apple --url "your-public-calendar-url"
+   Or configure in `config.toml`:
+   ```toml
+   calendar_provider = "url"
+   calendar_url = "https://calendar.example.com/public.ics"
    ```
 
-   The URL will be stored securely in your system keyring.
+**Privacy Note:** Only works with calendars explicitly made public. Private calendars require OAuth authentication (see Google Calendar setup). Public calendar URLs are readable by anyone with the URL.
 
-**Privacy Note:** Public calendars are read-only and don't require any credentials. Anyone with the URL can view your calendar, so only share it with people you trust. You can revoke access anytime by turning off "Public Calendar" in the Calendar app.
+**URL formats:**
+- `https://` URLs (recommended)
+- `http://` URLs (if server doesn't support HTTPS)
+- `webcal://` URLs (automatically converted to `https://`)
 
 #### Switching Providers
 
 To switch between providers, update your config file:
 
 ```toml
-calendar_provider = "apple"  # or "google"
+calendar_provider = "url"  # or "google" or "local"
 ```
 
 Then authenticate with the new provider using `avail auth --provider <provider>`.

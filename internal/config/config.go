@@ -16,9 +16,10 @@ type Config struct {
 	BufferDuration    time.Duration `toml:"buffer_duration"`
 	WorkHoursStart    string        `toml:"work_hours_start"`    // e.g., "09:00"
 	WorkHoursEnd      string        `toml:"work_hours_end"`      // e.g., "17:00"
-	CalendarProvider  string        `toml:"calendar_provider"`   // "google", "apple", etc.
+	CalendarProvider  string        `toml:"calendar_provider"`   // "google", "url", etc.
 	CalendarMode      string        `toml:"calendar_mode"`       // "network" (default) or "local"
 	LocalCalendarPath string        `toml:"local_calendar_path"` // Path to .ics file for local mode
+	CalendarURL       string        `toml:"calendar_url"`        // Public calendar URL for url provider
 }
 
 // WorkHours returns the WorkHours struct from config.
@@ -64,6 +65,7 @@ type configTOML struct {
 	CalendarProvider  string `toml:"calendar_provider"`
 	CalendarMode      string `toml:"calendar_mode"`
 	LocalCalendarPath string `toml:"local_calendar_path"`
+	CalendarURL       string `toml:"calendar_url"`
 }
 
 // Load reads and parses the config file.
@@ -89,6 +91,7 @@ func Load(path string) (*Config, error) {
 		CalendarProvider:  cfgTOML.CalendarProvider,
 		CalendarMode:      cfgTOML.CalendarMode,
 		LocalCalendarPath: cfgTOML.LocalCalendarPath,
+		CalendarURL:       cfgTOML.CalendarURL,
 	}
 
 	// Parse durations from string format (e.g., "30m", "15m")
@@ -185,6 +188,11 @@ func (c *Config) Validate() error {
 		return fmt.Errorf("local_calendar_path is required when calendar_mode is 'local'")
 	}
 
+	if calendarMode == "network" && c.CalendarProvider == "url" && c.CalendarURL == "" {
+		// CalendarURL is optional - can be stored in keyring instead
+		// But warn if neither is set
+	}
+
 	_, err := c.WorkHours()
 	if err != nil {
 		return err
@@ -206,6 +214,7 @@ func (c *Config) Save(path string) error {
 		CalendarProvider  string `toml:"calendar_provider"`
 		CalendarMode      string `toml:"calendar_mode"`
 		LocalCalendarPath string `toml:"local_calendar_path"`
+		CalendarURL       string `toml:"calendar_url"`
 	}
 
 	cfgSave := configSave{
@@ -217,6 +226,7 @@ func (c *Config) Save(path string) error {
 		CalendarProvider:  c.CalendarProvider,
 		CalendarMode:      c.CalendarMode,
 		LocalCalendarPath: c.LocalCalendarPath,
+		CalendarURL:       c.CalendarURL,
 	}
 
 	data, err := toml.Marshal(cfgSave)

@@ -4,48 +4,38 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"runtime"
 	"strings"
 
 	"github.com/spf13/cobra"
 
 	"github.com/robgyiv/availability/internal/config"
-	applecal "github.com/robgyiv/availability/internal/calendar/apple"
 )
 
-// newExportCmd creates the export command for Apple Calendar.
+// newExportCmd creates the export command for calendar export instructions.
 func newExportCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "export",
-		Short: "Export Apple Calendar to .ics file (macOS only)",
-		Long: `Exports your Apple Calendar to a local .ics file for use with local mode.
+		Short: "Show instructions for exporting calendar to .ics file",
+		Long: `Shows instructions for exporting your calendar to a local .ics file for use with local mode.
 
-This command is only available on macOS and requires Calendar.app access.
-
-For manual export:
-  1. Open Calendar.app
-  2. Select the calendar you want to export
-  3. File > Export > Export...
-  4. Choose a location and save as .ics file
+To export your calendar:
+  1. Open your calendar application (Calendar.app on macOS, Google Calendar, etc.)
+  2. Find the export option (typically File > Export or Settings)
+  3. Export as .ics format
+  4. Save the file
   5. Use: avail auth --provider local --file <path-to-exported-file.ics>
 
-Alternatively, you can use the public calendar URL method with:
-  avail auth --provider apple --url <your-public-calendar-url>`,
+Alternatively, you can use a public calendar URL with:
+  avail auth --provider url --url <your-public-calendar-url>`,
 		RunE: runExport,
 	}
 
-	cmd.Flags().StringP("calendar", "c", "", "Calendar name to export (optional, exports all if not specified)")
-	cmd.Flags().StringP("output", "o", "", "Output path for .ics file (default: ~/.config/avail/calendar.ics)")
+	cmd.Flags().StringP("output", "o", "", "Suggested output path for .ics file (default: ~/.config/avail/calendar.ics)")
 
 	return cmd
 }
 
 func runExport(cmd *cobra.Command, args []string) error {
-	if runtime.GOOS != "darwin" {
-		return fmt.Errorf("export command is only available on macOS")
-	}
-
-
 	// Get output path
 	outputPath, _ := cmd.Flags().GetString("output")
 	if outputPath == "" {
@@ -72,36 +62,20 @@ func runExport(cmd *cobra.Command, args []string) error {
 		outputPath = homeDir
 	}
 
-	calendarName, _ := cmd.Flags().GetString("calendar")
-
-	fmt.Printf("Exporting Apple Calendar to: %s\n", outputPath)
-	fmt.Printf("\nNote: Automatic export from Calendar.app is limited.\n")
-	fmt.Printf("For best results, please export manually:\n")
-	fmt.Printf("  1. Open Calendar.app\n")
-	fmt.Printf("  2. File > Export > Export...\n")
-	fmt.Printf("  3. Save to: %s\n", outputPath)
-	fmt.Printf("\nOr use the public calendar URL method:\n")
-	fmt.Printf("  avail auth --provider apple --url <your-public-calendar-url>\n\n")
-
-	// Try to export (may not work fully, but provides framework)
-	if calendarName != "" {
-		if err := applecal.ExportCalendar(calendarName, outputPath); err != nil {
-			// Don't fail - just warn
-			fmt.Printf("Warning: %v\n", err)
-			fmt.Printf("Please export manually as described above.\n")
-		}
-	} else {
-		if err := applecal.ExportAllCalendars(outputPath); err != nil {
-			fmt.Printf("Warning: %v\n", err)
-			fmt.Printf("Please export manually as described above.\n")
-		}
-	}
-
-	fmt.Printf("\nAfter exporting, you can use local mode:\n")
-	fmt.Printf("  1. Update config: calendar_mode = \"local\"\n")
-	fmt.Printf("  2. Update config: local_calendar_path = \"%s\"\n", outputPath)
-	fmt.Printf("  3. Run: avail show\n")
+	fmt.Printf("Suggested export location: %s\n\n", outputPath)
+	fmt.Printf("To export your calendar:\n\n")
+	fmt.Printf("1. Open your calendar application:\n")
+	fmt.Printf("   - macOS: Calendar.app (File > Export > Export...)\n")
+	fmt.Printf("   - Google Calendar: Settings > Export calendar\n")
+	fmt.Printf("   - Other: Check your calendar app's export options\n\n")
+	fmt.Printf("2. Export as .ics format and save to: %s\n\n", outputPath)
+	fmt.Printf("3. After exporting, configure avail:\n")
+	fmt.Printf("   avail auth --provider local --file %s\n\n", outputPath)
+	fmt.Printf("Or configure manually:\n")
+	fmt.Printf("   calendar_mode = \"local\"\n")
+	fmt.Printf("   local_calendar_path = \"%s\"\n\n", outputPath)
+	fmt.Printf("Alternative: Use a public calendar URL instead:\n")
+	fmt.Printf("   avail auth --provider url --url <your-public-calendar-url>\n")
 
 	return nil
 }
-
