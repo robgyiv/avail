@@ -26,7 +26,7 @@ To export your calendar:
   5. Use: avail auth --provider local --file <path-to-exported-file.ics>
 
 Alternatively, you can use a public calendar URL with:
-  avail auth --provider url --url <your-public-calendar-url>`,
+  avail auth --provider network --url <your-public-calendar-url>`,
 		RunE: runExport,
 	}
 
@@ -72,10 +72,10 @@ func runExport(cmd *cobra.Command, args []string) error {
 	fmt.Printf("3. After exporting, configure avail:\n")
 	fmt.Printf("   avail auth --provider local --file %s\n\n", outputPath)
 	fmt.Printf("Or configure manually:\n")
-	fmt.Printf("   calendar_mode = \"local\"\n")
+	fmt.Printf("   calendar_provider = \"local\"\n")
 	fmt.Printf("   local_calendar_path = \"%s\"\n\n", outputPath)
 	fmt.Printf("Alternative: Use a public calendar URL instead:\n")
-	fmt.Printf("   avail auth --provider url --url <your-public-calendar-url>\n")
+	fmt.Printf("   avail auth --provider network --url <your-public-calendar-url>\n")
 
 	return nil
 }

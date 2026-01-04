@@ -25,15 +25,15 @@ func newAuthCmd() *cobra.Command {
 
 Supported providers:
   - google: Google Calendar (OAuth2)
-  - url: Public calendar URL (any service serving iCalendar format)
+  - network: Public calendar URL (any service serving iCalendar format)
   - local: Local .ics file (read from local file system)
 
 The authentication token/URL/path will be stored securely in your system keyring.`,
 		RunE: runAuth,
 	}
 
-	cmd.Flags().StringP("provider", "p", "", "Calendar provider (google, url, local)")
-	cmd.Flags().StringP("url", "u", "", "Public calendar URL (for url provider)")
+	cmd.Flags().StringP("provider", "p", "", "Calendar provider (google, network, local)")
+	cmd.Flags().StringP("url", "u", "", "Public calendar URL (for network provider)")
 	cmd.Flags().StringP("file", "f", "", "Path to .ics file (for local provider)")
 
 	return cmd
@@ -79,7 +79,7 @@ func runAuth(cmd *cobra.Command, args []string) error {
 
 		provider = googlecal.NewProvider()
 
-	case "url":
+	case "network":
 		// Get public calendar URL
 		calendarURL, _ := cmd.Flags().GetString("url")
 		if calendarURL == "" {
@@ -103,7 +103,7 @@ func runAuth(cmd *cobra.Command, args []string) error {
 			fmt.Fprintf(os.Stderr, "  - Apple/iCloud: Calendar app > Calendars > Info icon > Public Calendar > Share Link\n")
 			fmt.Fprintf(os.Stderr, "  - Google Calendar: Settings > Integrate calendar > Public URL\n")
 			fmt.Fprintf(os.Stderr, "  - Other services: Check your calendar provider's documentation\n\n")
-			fmt.Fprintf(os.Stderr, "Or use: avail auth --provider url --url <your-calendar-url>\n")
+			fmt.Fprintf(os.Stderr, "Or use: avail auth --provider network --url <your-calendar-url>\n")
 			return fmt.Errorf("public calendar URL required")
 		}
 
@@ -143,7 +143,7 @@ func runAuth(cmd *cobra.Command, args []string) error {
 		provider = localcal.NewProviderFromPath(icsPath)
 
 	default:
-		return fmt.Errorf("unknown provider: %s (supported: google, url, local)", providerName)
+		return fmt.Errorf("unknown provider: %s (supported: google, network, local)", providerName)
 	}
 
 	// Authenticate

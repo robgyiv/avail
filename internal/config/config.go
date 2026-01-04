@@ -16,10 +16,9 @@ type Config struct {
 	BufferDuration    time.Duration `toml:"buffer_duration"`
 	WorkHoursStart    string        `toml:"work_hours_start"`    // e.g., "09:00"
 	WorkHoursEnd      string        `toml:"work_hours_end"`      // e.g., "17:00"
-	CalendarProvider  string        `toml:"calendar_provider"`   // "google", "url", etc.
-	CalendarMode      string        `toml:"calendar_mode"`       // "network" (default) or "local"
-	LocalCalendarPath string        `toml:"local_calendar_path"` // Path to .ics file for local mode
-	CalendarURL       string        `toml:"calendar_url"`        // Public calendar URL for url provider
+	CalendarProvider  string        `toml:"calendar_provider"`   // "google", "network", "local"
+	LocalCalendarPath string        `toml:"local_calendar_path"` // Path to .ics file for local provider
+	CalendarURL       string        `toml:"calendar_url"`        // Public calendar URL for network provider
 }
 
 // WorkHours returns the WorkHours struct from config.
@@ -63,7 +62,6 @@ type configTOML struct {
 	WorkHoursStart    string `toml:"work_hours_start"`
 	WorkHoursEnd      string `toml:"work_hours_end"`
 	CalendarProvider  string `toml:"calendar_provider"`
-	CalendarMode      string `toml:"calendar_mode"`
 	LocalCalendarPath string `toml:"local_calendar_path"`
 	CalendarURL       string `toml:"calendar_url"`
 }
@@ -89,7 +87,6 @@ func Load(path string) (*Config, error) {
 		WorkHoursStart:    cfgTOML.WorkHoursStart,
 		WorkHoursEnd:      cfgTOML.WorkHoursEnd,
 		CalendarProvider:  cfgTOML.CalendarProvider,
-		CalendarMode:      cfgTOML.CalendarMode,
 		LocalCalendarPath: cfgTOML.LocalCalendarPath,
 		CalendarURL:       cfgTOML.CalendarURL,
 	}
@@ -117,9 +114,6 @@ func Load(path string) (*Config, error) {
 	}
 	if cfg.BufferDuration == 0 {
 		cfg.BufferDuration = 15 * time.Minute
-	}
-	if cfg.CalendarMode == "" {
-		cfg.CalendarMode = "network"
 	}
 	if cfg.Timezone == "" {
 		cfg.Timezone = "UTC"
@@ -175,22 +169,8 @@ func (c *Config) Validate() error {
 		return fmt.Errorf("work hours start and end are required")
 	}
 
-	calendarMode := c.CalendarMode
-	if calendarMode == "" {
-		calendarMode = "network" // Default
-	}
-
-	if calendarMode != "network" && calendarMode != "local" {
-		return fmt.Errorf("calendar_mode must be 'network' or 'local'")
-	}
-
-	if calendarMode == "local" && c.LocalCalendarPath == "" {
-		return fmt.Errorf("local_calendar_path is required when calendar_mode is 'local'")
-	}
-
-	if calendarMode == "network" && c.CalendarProvider == "url" && c.CalendarURL == "" {
-		// CalendarURL is optional - can be stored in keyring instead
-		// But warn if neither is set
+	if c.CalendarProvider == "local" && c.LocalCalendarPath == "" {
+		return fmt.Errorf("local_calendar_path is required when calendar_provider is 'local'")
 	}
 
 	_, err := c.WorkHours()
@@ -212,7 +192,6 @@ func (c *Config) Save(path string) error {
 		WorkHoursStart    string `toml:"work_hours_start"`
 		WorkHoursEnd      string `toml:"work_hours_end"`
 		CalendarProvider  string `toml:"calendar_provider"`
-		CalendarMode      string `toml:"calendar_mode"`
 		LocalCalendarPath string `toml:"local_calendar_path"`
 		CalendarURL       string `toml:"calendar_url"`
 	}
@@ -224,7 +203,6 @@ func (c *Config) Save(path string) error {
 		WorkHoursStart:    c.WorkHoursStart,
 		WorkHoursEnd:      c.WorkHoursEnd,
 		CalendarProvider:  c.CalendarProvider,
-		CalendarMode:      c.CalendarMode,
 		LocalCalendarPath: c.LocalCalendarPath,
 		CalendarURL:       c.CalendarURL,
 	}
@@ -246,7 +224,6 @@ func Default() *Config {
 		WorkHoursStart:   "09:00",
 		WorkHoursEnd:     "17:00",
 		CalendarProvider: "google",
-		CalendarMode:     "network",
 	}
 }
 

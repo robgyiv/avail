@@ -49,38 +49,29 @@ func runShow(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("invalid work hours: %w", err)
 	}
 
-	// Create calendar provider based on config mode
+	// Create calendar provider based on config
 	var provider cal.Provider
-	calendarMode := cfg.CalendarMode
-	if calendarMode == "" {
-		calendarMode = "network" // Default
+	providerName := cfg.CalendarProvider
+	if providerName == "" {
+		providerName = "google" // Default
 	}
 
-	if calendarMode == "local" {
-		// Local mode: read from .ics file
+	switch providerName {
+	case "google":
+		provider = googlecal.NewProvider()
+	case "network":
+		if cfg.CalendarURL != "" {
+			provider = urlcal.NewProviderFromURL(cfg.CalendarURL)
+		} else {
+			provider = urlcal.NewProvider()
+		}
+	case "local":
 		if cfg.LocalCalendarPath == "" {
-			return fmt.Errorf("local_calendar_path is required when calendar_mode is 'local'")
+			return fmt.Errorf("local_calendar_path is required when calendar_provider is 'local'")
 		}
 		provider = localcal.NewProviderFromPath(cfg.LocalCalendarPath)
-	} else {
-		// Network mode: use HTTP-based providers
-		providerName := cfg.CalendarProvider
-		if providerName == "" {
-			providerName = "google" // Default
-		}
-
-		switch providerName {
-		case "google":
-			provider = googlecal.NewProvider()
-		case "url":
-			if cfg.CalendarURL != "" {
-				provider = urlcal.NewProviderFromURL(cfg.CalendarURL)
-			} else {
-				provider = urlcal.NewProvider()
-			}
-		default:
-			return fmt.Errorf("unknown provider: %s (supported: google, url)", providerName)
-		}
+	default:
+		return fmt.Errorf("unknown provider: %s (supported: google, network, local)", providerName)
 	}
 
 	// Try to load existing token, otherwise authenticate
