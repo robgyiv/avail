@@ -8,12 +8,12 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/robgyiv/availability/internal/config"
-	"github.com/robgyiv/availability/pkg/engine"
-	applecal "github.com/robgyiv/availability/internal/calendar/apple"
 	cal "github.com/robgyiv/availability/internal/calendar"
 	googlecal "github.com/robgyiv/availability/internal/calendar/google"
 	localcal "github.com/robgyiv/availability/internal/calendar/local"
+	urlcal "github.com/robgyiv/availability/internal/calendar/url"
+	"github.com/robgyiv/availability/internal/config"
+	"github.com/robgyiv/availability/pkg/engine"
 )
 
 // newShowCmd creates the show command.
@@ -49,47 +49,49 @@ func runShow(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("invalid work hours: %w", err)
 	}
 
-	// Create calendar provider based on config mode
+	// Create calendar provider based on config
 	var provider cal.Provider
-	calendarMode := cfg.CalendarMode
-	if calendarMode == "" {
-		calendarMode = "network" // Default
-	}
-
-	if calendarMode == "local" {
-		// Local mode: read from .ics file
-		if cfg.LocalCalendarPath == "" {
-			return fmt.Errorf("local_calendar_path is required when calendar_mode is 'local'")
-		}
-		provider = localcal.NewProviderFromPath(cfg.LocalCalendarPath)
-	} else {
-		// Network mode: use HTTP-based providers
-		providerName := cfg.CalendarProvider
-		if providerName == "" {
+	providerName := cfg.CalendarProvider
+	if providerName == "" {
+		// Migration: if LocalCalendarPath is set, assume local provider
+		if cfg.LocalCalendarPath != "" {
+			providerName = "local"
+		} else {
 			providerName = "google" // Default
 		}
-
-		switch providerName {
-		case "google":
-			provider = googlecal.NewProvider()
-		case "apple", "icloud":
-			provider = applecal.NewProvider()
-		default:
-			return fmt.Errorf("unknown provider: %s (supported: google, apple)", providerName)
-		}
 	}
 
-	// Try to load existing token, otherwise authenticate
-	if !provider.IsAuthenticated() {
-		// Try to load token (provider-specific)
-		if loadable, ok := provider.(interface{ LoadToken(context.Context) error }); ok {
-			if err := loadable.LoadToken(ctx); err != nil {
-				fmt.Fprintf(os.Stderr, "Not authenticated. Please run 'avail auth' first.\n")
-				return err
-			}
+	switch providerName {
+	case "google":
+		provider = googlecal.NewProvider()
+	case "network":
+		if cfg.CalendarURL != "" {
+			provider = urlcal.NewProviderFromURL(cfg.CalendarURL)
 		} else {
-			fmt.Fprintf(os.Stderr, "Not authenticated. Please run 'avail auth' first.\n")
-			return fmt.Errorf("not authenticated")
+			provider = urlcal.NewProvider()
+		}
+	case "local":
+		if cfg.LocalCalendarPath == "" {
+			return fmt.Errorf("local_calendar_path not set in config file\n\nSet local_calendar_path in ~/.config/avail/config.toml:\n  local_calendar_path = \"/path/to/calendar.ics\"")
+		}
+		provider = localcal.NewProviderFromPath(cfg.LocalCalendarPath)
+	default:
+		return fmt.Errorf("unknown provider: %s (supported: google, network, local)", providerName)
+	}
+
+	// For providers that need authentication (google, network), load credentials from keyring
+	if providerName != "local" {
+		if !provider.IsAuthenticated() {
+			// Try to load token (provider-specific)
+			if loadable, ok := provider.(interface{ LoadToken(context.Context) error }); ok {
+				if err := loadable.LoadToken(ctx); err != nil {
+					fmt.Fprintf(os.Stderr, "Not authenticated. Please run 'avail auth' first.\n")
+					return err
+				}
+			} else {
+				fmt.Fprintf(os.Stderr, "Not authenticated. Please run 'avail auth' first.\n")
+				return fmt.Errorf("not authenticated")
+			}
 		}
 	}
 
@@ -133,4 +135,3 @@ func runShow(cmd *cobra.Command, args []string) error {
 
 	return nil
 }
-

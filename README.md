@@ -1,18 +1,17 @@
 # avail
 
-Generate up-to-date availability you can share — without booking links.
+Remove manual checking and generate up-to-date availability you can share.
 
 ## What avail is
 - A local-first availability generator
 - Privacy-first by design
 - Works in your terminal
-- Produces text, links, and proposals
+- Produces text you can share with guests easily
 
 ## What avail is not
 - A scheduler
 - A booking system
 - A calendar writer
-- A background sync service
 
 ## How it works
 1. Read your calendar (locally where possible)
@@ -24,11 +23,6 @@ Generate up-to-date availability you can share — without booking links.
 - Event details never leave your machine
 - Only derived availability is shared
 - Read-only access only
-
-## Paid features
-- Shareable links
-- Longer expiry
-- Multiple active links
 
 ## Philosophy
 Avail assists conversations — it does not automate them.
@@ -45,7 +39,7 @@ Avail assists conversations — it does not automate them.
 
 ```bash
 # Clone the repository
-git clone https://github.com/robgyiv/availability.git
+git clone https://github.com/robgyiv/avail.git
 cd availability
 
 # Build the binary
@@ -81,9 +75,11 @@ On first run, `avail` will create a default configuration file at `~/.config/ava
 - `meeting_duration` - Default meeting duration (default: 30 minutes)
 - `work_hours_start` - Start of work day (default: "09:00")
 - `work_hours_end` - End of work day (default: "17:00")
-- `calendar_provider` - Calendar provider (default: "google")
+- `calendar_provider` - Calendar provider: `"google"`, `"network"`, or `"local"` (default: "google")
+- `calendar_url` - Public calendar URL (required when `calendar_provider = "network"`)
+- `local_calendar_path` - Path to local .ics file (required when `calendar_provider = "local"`)
 
-Example config:
+Example config for Google Calendar:
 
 ```toml
 timezone = "America/New_York"
@@ -93,68 +89,133 @@ work_hours_end = "17:00"
 calendar_provider = "google"
 ```
 
+Example config for public calendar URL:
+
+```toml
+calendar_provider = "network"
+calendar_url = "https://calendar.example.com/public.ics"
+```
+
+Example config for local file:
+
+```toml
+calendar_provider = "local"
+local_calendar_path = "~/Desktop/calendar.ics"
+```
+
 ### Authentication
 
-Before using `avail`, you need to authenticate with your calendar provider. The tool supports:
+Before using `avail`, you need to configure and authenticate with your calendar provider. The tool supports:
 
 - **Google Calendar** (OAuth2)
-- **Apple/iCloud Calendar** (public calendar URL - privacy-first, read-only)
+- **Public Calendar URLs** (any service serving iCalendar format - privacy-first, read-only)
+- **Local Calendar Files** (.ics files)
 
-#### Google Calendar Setup
+**Configuration-first approach:** Set your provider in the config file first, then run `avail auth` to authenticate.
 
-1. **Create OAuth credentials:**
+#### Google Calendar Setup (OAuth2)
+
+Avail requires you to create your own OAuth application for privacy. We don't provide shared credentials to ensure your calendar data never passes through third-party servers when using this library.
+
+1. **Configure provider:**
+   Edit `~/.config/avail/config.toml`:
+   ```toml
+   calendar_provider = "google"
+   ```
+
+2. **Create OAuth credentials:**
    - Go to [Google Cloud Console](https://console.cloud.google.com/apis/credentials)
-   - Create an OAuth 2.0 Client ID (Application type: Desktop app)
+   - Create a new project (or select existing)
+   - Enable the Google Calendar API
+   - Create OAuth 2.0 Client ID
+     - Application type: **Desktop app**
+     - Name: "Avail CLI" (or any name you prefer)
    - Note your Client ID and Client Secret
 
-2. **Set environment variables:**
+3. **Set environment variables:**
    ```bash
    export GOOGLE_CLIENT_ID="your-client-id"
    export GOOGLE_CLIENT_SECRET="your-client-secret"
    ```
 
-3. **Authenticate:**
+4. **Authenticate:**
    ```bash
-   avail auth --provider google
+   avail auth
    ```
+   
+   This opens a browser for OAuth authentication. The token is stored securely in your system keyring.
 
-   This will open a browser window for OAuth authentication. The token will be stored securely in your system keyring.
+**Privacy:** Your OAuth credentials are used only by your local CLI. Calendar data is processed locally and never sent to any third-party servers.
 
-#### Apple/iCloud Calendar Setup (Public Calendar - Privacy-First)
+#### Public Calendar URL Setup
 
-Apple/iCloud calendars use public calendar URLs for privacy-first, read-only access. No app-specific passwords needed!
+Avail can fetch events from any publicly accessible calendar URL that serves iCalendar (.ics) format.
 
-1. **Get your public calendar URL:**
-   - Open the Calendar app on your iPhone or Mac
-   - Tap/click the "Calendars" button at the bottom
-   - Tap/click the info icon (ℹ️) next to the calendar you want to use
-   - Toggle on "Public Calendar"
-   - Tap/click "Share Link" to copy the public calendar URL
-   - The URL will look like: `webcal://p[numbers]-calendars.icloud.com/published/2/[long-string]`
+**Supported sources:**
+- Apple/iCloud public calendars
+- Google Calendar public feeds
+- CalDAV server public calendars
+- Any HTTP/HTTPS endpoint serving `.ics` format
+
+**Setup:**
+
+1. **Configure provider:**
+   Edit `~/.config/avail/config.toml`:
+   ```toml
+   calendar_provider = "network"
+   calendar_url = "https://calendar.example.com/public.ics"
+   ```
+   
+   To get your public calendar URL:
+   - **Apple/iCloud**: Open Calendar app → Calendars → Info icon → Toggle "Public Calendar" → "Share Link"
+   - **Google Calendar**: Calendar Settings → Integrate calendar → Public URL
+   - **Other services**: Check your calendar provider's documentation for public feed URLs
 
 2. **Authenticate:**
    ```bash
-   avail auth --provider apple
+   avail auth
    ```
    
-   When prompted, paste your public calendar URL. Or use:
-   ```bash
-   avail auth --provider apple --url "your-public-calendar-url"
+   The URL is validated and stored securely in your system keyring.
+
+**Privacy Note:** Only works with calendars explicitly made public. Private calendars require OAuth authentication (see Google Calendar setup). Public calendar URLs are readable by anyone with the URL.
+
+**URL formats:**
+- `https://` URLs (recommended)
+- `http://` URLs (if server doesn't support HTTPS)
+- `webcal://` URLs (automatically converted to `https://`)
+
+#### Local Calendar File Setup
+
+Use a local `.ics` file on your filesystem.
+
+To export your calendar:
+
+1. Open your calendar application:
+   - macOS: Calendar.app (File > Export > Export...)
+   - Google Calendar: Settings > Export calendar
+   - Other: Check your calendar app's export options
+
+2. Export as .ics format and save to: /Users/robbie/.config/avail/calendar.ics
+
+3. **Configure provider:**
+   Edit `~/.config/avail/config.toml`:
+   ```toml
+   calendar_provider = "local"
+   local_calendar_path = "/path/to/calendar.ics"
+   ```
+   
+   You can use `~` to refer to your home directory:
+   ```toml
+   local_calendar_path = "~/Desktop/calendar.ics"
    ```
 
-   The URL will be stored securely in your system keyring.
-
-**Privacy Note:** Public calendars are read-only and don't require any credentials. Anyone with the URL can view your calendar, so only share it with people you trust. You can revoke access anytime by turning off "Public Calendar" in the Calendar app.
-
-#### Switching Providers
-
-To switch between providers, update your config file:
-
-```toml
-calendar_provider = "apple"  # or "google"
-```
-
-Then authenticate with the new provider using `avail auth --provider <provider>`.
+4. **Use directly:**
+   ```bash
+   avail show
+   ```
+   
+   No authentication needed - the file is read directly from the filesystem.
 
 ### Show Availability
 
@@ -180,8 +241,6 @@ Fri 15 Mar
 
 Time zone: UTC
 ```
-
-**Note:** Requires calendar authentication. See the [Authentication](#authentication) section below.
 
 ### Copy to Clipboard
 
@@ -228,438 +287,5 @@ $ avail copy --help
 **In Progress / Planned:**
 - ⏳ `avail link` command (shareable links)
 - ⏳ `avail propose` command (interactive TUI for time selection)
-
----
-
-## Reframed Capability
-
-From the guest’s perspective:
-
-> “I pick a time I like, then I get something useful I can send or add — nothing happens automatically.”
-
-This reduces friction **without**:
-
-* reserving the slot
-* writing to the host’s calendar
-* requiring accounts or permissions
-
----
-
-## Updated Guest Flow (Availability Link)
-
-1. Guest opens availability link
-2. Sees days → time blocks
-3. Clicks a block (e.g. Tue 14:00–16:00)
-4. Chooses a specific start time (e.g. 14:30)
-5. App generates:
-
-   * a **proposed meeting payload**
-
-Guest then chooses:
-
-* 📅 “Add to my calendar”
-* ✉️ “Email this time to host”
-* 📋 “Copy details”
-
-Nothing is confirmed yet.
-
----
-
-## What the App Actually Generates
-
-### A. Generic calendar event (ICS)
-
-The event is **tentative**, not authoritative.
-
-Fields:
-
-* Title: `Proposed meeting with Alex`
-* Start / end time
-* Time zone
-* Description:
-
-  ```
-  Proposed via Alex’s availability link.
-  Please confirm before considering this final.
-  ```
-
-This works across:
-
-* Google Calendar
-* Apple Calendar
-* Outlook
-
-No integrations required.
-
----
-
-### B. Structured email content
-
-Auto-generated, human-readable:
-
-```
-Hi Alex,
-
-I’m free at:
-Tuesday 12 March, 14:30–15:00 (GMT)
-
-Let me know if that works for you.
-
-Best,
-Sam
-```
-
-You’re not sending the email — just generating it.
-
----
-
-### C. Copyable payload
-
-For Slack / WhatsApp / Teams:
-
-```
-How about Tue 12 Mar at 14:30–15:00 (GMT)?
-```
-
----
-
-## Critical Constraint: No Slot Locking
-
-This must be explicit in the UX.
-
-* Selecting a time does **not** reserve it
-* Multiple guests can propose the same time
-* Host confirmation remains the source of truth
-
-You should surface this with:
-
-* copy (“This doesn’t book the time yet”)
-* subtle UI affordances (e.g. dotted outlines, “proposed” labels)
-
-This avoids legal and emotional liability.
-
----
-
-## Updated Feature List (Tight)
-
-### Feature 1: Read-only calendar integration
-
-(unchanged)
-
-### Feature 2: Availability engine
-
-(unchanged, core)
-
-### Feature 3: Shareable availability link
-
-* Live view
-* Mobile-friendly
-* No auth
-
-### Feature 4: Time selection → proposal generator
-
-* Click block → pick start time
-* Generate:
-
-  * ICS
-  * email text
-  * copyable message
-
-Still:
-
-* ❌ no booking
-* ❌ no confirmation
-* ❌ no calendar writes
-
----
-
-## Edge Cases to Handle (Now Explicit)
-
-You’ve introduced a few — manageable, but must be defined:
-
-* **Time disappears between view and click**
-
-  * Show warning: “This time may no longer be available”
-* **Guest calendar conflicts**
-
-  * That’s their responsibility; you’re generating, not validating
-* **Host changes calendar after proposal**
-
-  * Host simply declines — same as email today
-* **Time zones**
-
-  * Always show:
-
-    * guest-local time
-    * host time zone in parentheses
-
----
-
-## 1. Why a TUI / CLI MVP is a good idea
-
-### This works because:
-
-* Developers already live in terminals
-* Copy-paste is the primary interaction
-* Text output *is the product*
-* You avoid premature UI bikeshedding
-* You validate the **availability engine**, not your CSS
-
-You’re effectively building a **calendar query tool** first.
-
-This is closer to:
-
-* `gh`
-* `kubectl`
-* `pass`
-  than to Calendly.
-
-That’s a *good* thing.
-
----
-
-## 2. What the TUI *is* and *is not*
-
-### The TUI *is*:
-
-* A personal availability generator
-* A formatter
-* A link creator
-* A proposal generator
-
-### The TUI is *not*:
-
-* A scheduler
-* A daemon
-* A calendar writer
-* A background sync service
-
-No long-running processes. No event listeners.
-
----
-
-## 3. MVP CLI / TUI Flow (Planned)
-
-> **Note:** This section describes the planned full MVP feature set. See the [Usage](#usage) section above for currently implemented commands.
-
-### Installation
-
-```
-$ brew install avail
-# or
-$ npm install -g avail
-```
-
----
-
-### Auth (one-time) - *Planned*
-
-```
-$ avail auth
-✔ Opening browser to connect Google Calendar…
-✔ Calendar connected (read-only)
-```
-
-Tokens stored securely (keychain if possible).
-
----
-
-### Basic availability - *Implemented*
-
-```
-$ avail show
-```
-
-Output:
-
-```
-Your availability (next 5 days):
-
-Tue 12 Mar
-  • 14:00–16:00
-
-Wed 13 Mar
-  • 10:00–11:30
-
-Fri 15 Mar
-  • after 13:00
-
-Time zone: GMT
-```
-
-This alone is a useful tool.
-
----
-
-### Copyable output - *Implemented*
-
-```
-$ avail copy
-```
-
-Copies to clipboard:
-
-```
-I'm free:
-• Tue 12 Mar 14:00–16:00
-• Wed 13 Mar 10:00–11:30
-• Fri 15 Mar after 13:00
-```
-
----
-
-### Generate shareable link - *Planned*
-
-```
-$ avail link
-```
-
-Output:
-
-```
-Live availability:
-https://avail.app/alex/abc123
-(valid for 7 days)
-```
-
----
-
-### Propose a time (structured intent) - *Planned*
-
-```
-$ avail propose
-```
-
-Interactive TUI:
-
-```
-Select a day:
-> Tue 12 Mar
-  Wed 13 Mar
-  Fri 15 Mar
-
-Select a time:
-> 14:30–15:00
-  15:00–15:30
-```
-
-Result:
-
-```
-✔ Proposal created
-
-Options:
-[1] Copy message
-[2] Generate .ics
-[3] Email text
-```
-
-No network dependency beyond the proposal itself.
-
----
-
-## 4. Minimal Web UI (Only Where Needed)
-
-The web UI exists for **two reasons only**:
-
-1. OAuth callback
-2. Guest availability viewing
-
-That’s it.
-
-No dashboards.
-No settings pages initially.
-
-Host configuration can live in:
-
-```
-~/.config/avail/config.toml
-```
-
-Example:
-
-```toml
-timezone = "Europe/London"
-meeting_duration = 30
-work_hours = "09:00-17:00"
-```
-
-This is extremely dev-friendly.
-
----
-
-## 5. Architecture Benefits (This Is the Hidden Win)
-
-By going CLI-first:
-
-* Your **availability engine** becomes a pure function
-* Your web UI becomes a thin renderer
-* Your API is naturally composable
-* You avoid UI-driven design mistakes
-
-Core shape:
-
-```
-calendar → availability engine → text / link / proposal
-```
-
-Same engine powers:
-
-* CLI
-* TUI
-* web guest page
-* future API integrations
-
-That’s very clean.
-
----
-
-## 6. MVP Scope (Now Very Clear)
-
-### Phase 0 (Private alpha)
-
-* CLI only
-* Google Calendar
-* Copyable availability
-* Shareable link
-* Proposal generator
-
-### Phase 1
-
-* Guest web view
-* Time selection UI
-* ICS download
-
-### Phase 2 (if demanded)
-
-* Lightweight web host UI
-* Non-developer onboarding
-
----
-
-## 7. Positioning (This Will Attract the Right Users)
-
-You’re no longer competing with Calendly.
-
-You’re competing with:
-
-* writing emails manually
-* thinking too hard about time zones
-* calendar anxiety
-
-Possible tagline:
-
-> “Generate availability from your terminal.”
-
-Or:
-
-> “Scheduling, without scheduling.”
-
----
-
-## 8. Where does config live long-term?
-
-* Local-first (CLI owns config)
-* Then server-stored and synced(CLI is a client)
 
 ---

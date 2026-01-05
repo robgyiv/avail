@@ -7,7 +7,6 @@ import (
 	"time"
 
 	cal "github.com/robgyiv/availability/internal/calendar"
-	"github.com/robgyiv/availability/internal/config"
 	"github.com/robgyiv/availability/pkg/availability"
 )
 
@@ -48,26 +47,16 @@ func (p *Provider) Authenticate(ctx context.Context) error {
 	}
 	file.Close()
 
-	// Store the path in keyring
-	if err := config.StoreToken(p.icsFilePath); err != nil {
-		return fmt.Errorf("failed to store calendar path: %w", err)
-	}
-
+	// For local provider, path is stored in config file, not keyring
+	// Keyring is only used for sensitive credentials (OAuth tokens, etc.)
 	return nil
 }
 
-// LoadToken loads the .ics file path from the keyring.
+// LoadToken is not used for local provider - path comes from config file.
+// This method exists to satisfy the interface but should not be called.
 func (p *Provider) LoadToken(ctx context.Context) error {
-	icsPath, err := config.GetToken()
-	if err != nil {
-		if err == config.ErrTokenNotFound {
-			return fmt.Errorf("not authenticated: %w", err)
-		}
-		return fmt.Errorf("failed to get calendar path: %w", err)
-	}
-
-	p.icsFilePath = icsPath
-	return nil
+	// Local provider paths are stored in config, not keyring
+	return fmt.Errorf("local provider does not use keyring - set local_calendar_path in config file")
 }
 
 // IsAuthenticated checks if the provider has a calendar file path.

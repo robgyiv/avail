@@ -1,4 +1,4 @@
-package apple
+package url
 
 import (
 	"context"
@@ -13,13 +13,18 @@ import (
 	"github.com/robgyiv/availability/pkg/availability"
 )
 
-// Provider implements the calendar.Provider interface for Apple/iCloud public calendars.
+// Provider implements the calendar.Provider interface for public calendar URLs.
+// Works with any public calendar that serves iCalendar (.ics) format:
+// - Apple/iCloud public calendars
+// - Google Calendar public feeds
+// - CalDAV server public calendars
+// - Any HTTP/HTTPS endpoint serving .ics format
 type Provider struct {
 	calendarURL string
 	client      *http.Client
 }
 
-// NewProvider creates a new Apple Calendar provider for public calendars.
+// NewProvider creates a new URL provider for public calendars.
 func NewProvider() *Provider {
 	return &Provider{
 		client: &http.Client{
@@ -102,7 +107,7 @@ func (p *Provider) IsAuthenticated() bool {
 	return p.calendarURL != ""
 }
 
-// ListEvents fetches events from the public iCloud calendar.
+// ListEvents fetches events from the public calendar URL.
 func (p *Provider) ListEvents(ctx context.Context, start, end time.Time) ([]availability.Event, error) {
 	if !p.IsAuthenticated() {
 		return nil, fmt.Errorf("not authenticated")
@@ -146,3 +151,4 @@ func (p *Provider) ListEvents(ctx context.Context, start, end time.Time) ([]avai
 
 // Ensure Provider implements the calendar.Provider interface.
 var _ cal.Provider = (*Provider)(nil)
+
