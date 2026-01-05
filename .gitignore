@@ -1,6 +1,5 @@
 # Internal documentation (not for git history)
-milestones.md
-monetisation.md
+.notes/
 
 # Go build artifacts
 *.exe
@@ -33,5 +32,3 @@ go.work
 Thumbs.db
 
 .envrc
-master-decisions.md
-notes/
