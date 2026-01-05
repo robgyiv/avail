@@ -1,18 +1,17 @@
 # avail
 
-Generate up-to-date availability you can share — without booking links.
+Remove manual checking and generate up-to-date availability you can share.
 
 ## What avail is
 - A local-first availability generator
 - Privacy-first by design
 - Works in your terminal
-- Produces text, links, and proposals
+- Produces text you can share with guests easily
 
 ## What avail is not
 - A scheduler
 - A booking system
 - A calendar writer
-- A background sync service
 
 ## How it works
 1. Read your calendar (locally where possible)
@@ -24,11 +23,6 @@ Generate up-to-date availability you can share — without booking links.
 - Event details never leave your machine
 - Only derived availability is shared
 - Read-only access only
-
-## Paid features
-- Shareable links
-- Longer expiry
-- Multiple active links
 
 ## Philosophy
 Avail assists conversations — it does not automate them.
@@ -247,8 +241,6 @@ Fri 15 Mar
 
 Time zone: UTC
 ```
-
-**Note:** Requires calendar authentication. See the [Authentication](#authentication) section below.
 
 ### Copy to Clipboard
 
