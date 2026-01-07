@@ -27,6 +27,8 @@ Remove manual checking and generate up-to-date availability you can share.
 ## Philosophy
 Avail assists conversations — it does not automate them.
 
+**NOTE**: This project is under active development and breaking changes are likely.
+
 ---
 
 ## Setup
