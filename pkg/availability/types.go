@@ -10,7 +10,7 @@ type TimeBlock struct {
 
 // Availability represents available time blocks for a specific date.
 type Availability struct {
-	Date  time.Time
+	Date   time.Time
 	Blocks []TimeBlock
 }
 
@@ -29,4 +29,3 @@ type WorkHours struct {
 	Start time.Duration // e.g., 9*time.Hour for 09:00
 	End   time.Duration // e.g., 17*time.Hour for 17:00
 }
-

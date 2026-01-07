@@ -18,4 +18,3 @@ type Provider interface {
 	// IsAuthenticated checks if the provider is currently authenticated.
 	IsAuthenticated() bool
 }
-

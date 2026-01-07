@@ -56,5 +56,3 @@ func TestRunShow_ErrorMessages(t *testing.T) {
 		})
 	}
 }
-
-

@@ -98,4 +98,3 @@ END:VEVENT`
 		t.Error("parseVEvent() should return nil for events outside date range")
 	}
 }
-

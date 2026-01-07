@@ -79,4 +79,3 @@ func TestRunAuth_MissingOAuthCredentials(t *testing.T) {
 		t.Error("Error message should indicate OAuth credentials are required")
 	}
 }
-
