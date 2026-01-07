@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/pelletier/go-toml/v2"
-	"github.com/robgyiv/availability/pkg/availability"
+	"github.com/robgyiv/avail/pkg/availability"
 )
 
 // Config represents the application configuration.

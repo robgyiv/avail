@@ -4,7 +4,7 @@ import (
 	"sort"
 	"time"
 
-	"github.com/robgyiv/availability/pkg/availability"
+	"github.com/robgyiv/avail/pkg/availability"
 )
 
 // GroupBlocksByDay groups time blocks by their date.

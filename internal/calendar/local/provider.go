@@ -6,8 +6,8 @@ import (
 	"os"
 	"time"
 
-	cal "github.com/robgyiv/availability/internal/calendar"
-	"github.com/robgyiv/availability/pkg/availability"
+	cal "github.com/robgyiv/avail/internal/calendar"
+	"github.com/robgyiv/avail/pkg/availability"
 )
 
 // Provider implements the calendar.Provider interface for local .ics files.

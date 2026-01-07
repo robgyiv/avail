@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/robgyiv/availability/pkg/availability"
+	"github.com/robgyiv/avail/pkg/availability"
 )
 
 // FormatTimeBlock formats a time block as a human-readable string.

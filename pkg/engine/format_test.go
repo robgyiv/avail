@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/robgyiv/availability/pkg/availability"
+	"github.com/robgyiv/avail/pkg/availability"
 )
 
 func TestFormatTimeBlock(t *testing.T) {
