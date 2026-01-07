@@ -4,7 +4,7 @@ import (
 	"context"
 	"time"
 
-	"github.com/robgyiv/availability/pkg/availability"
+	"github.com/robgyiv/avail/pkg/availability"
 )
 
 // Provider defines the interface for calendar integrations.

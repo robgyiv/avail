@@ -1,4 +1,4 @@
-module github.com/robgyiv/availability
+module github.com/robgyiv/avail
 
 go 1.25.5
 

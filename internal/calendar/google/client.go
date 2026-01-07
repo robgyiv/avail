@@ -10,9 +10,9 @@ import (
 	"golang.org/x/oauth2/google"
 	calendar "google.golang.org/api/calendar/v3"
 
-	cal "github.com/robgyiv/availability/internal/calendar"
-	"github.com/robgyiv/availability/internal/config"
-	"github.com/robgyiv/availability/pkg/availability"
+	cal "github.com/robgyiv/avail/internal/calendar"
+	"github.com/robgyiv/avail/internal/config"
+	"github.com/robgyiv/avail/pkg/availability"
 )
 
 // Provider implements the calendar.Provider interface for Google Calendar.

@@ -4,8 +4,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/robgyiv/availability/internal/api"
-	"github.com/robgyiv/availability/pkg/availability"
+	"github.com/robgyiv/avail/internal/api"
+	"github.com/robgyiv/avail/pkg/availability"
 )
 
 func TestTransformToAPIFormat(t *testing.T) {

@@ -8,14 +8,14 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/robgyiv/availability/internal/api"
-	cal "github.com/robgyiv/availability/internal/calendar"
-	googlecal "github.com/robgyiv/availability/internal/calendar/google"
-	localcal "github.com/robgyiv/availability/internal/calendar/local"
-	urlcal "github.com/robgyiv/availability/internal/calendar/url"
-	"github.com/robgyiv/availability/internal/config"
-	"github.com/robgyiv/availability/pkg/availability"
-	"github.com/robgyiv/availability/pkg/engine"
+	"github.com/robgyiv/avail/internal/api"
+	cal "github.com/robgyiv/avail/internal/calendar"
+	googlecal "github.com/robgyiv/avail/internal/calendar/google"
+	localcal "github.com/robgyiv/avail/internal/calendar/local"
+	urlcal "github.com/robgyiv/avail/internal/calendar/url"
+	"github.com/robgyiv/avail/internal/config"
+	"github.com/robgyiv/avail/pkg/availability"
+	"github.com/robgyiv/avail/pkg/engine"
 )
 
 // newPushCmd creates the push command.

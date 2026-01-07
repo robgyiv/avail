@@ -6,7 +6,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/robgyiv/availability/pkg/availability"
+	"github.com/robgyiv/avail/pkg/availability"
 )
 
 // parseICalendar parses iCalendar (ICS) format data and extracts events.

@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/robgyiv/availability/internal/config"
+	"github.com/robgyiv/avail/internal/config"
 )
 
 func TestRunAuth_MissingCalendarProvider(t *testing.T) {

@@ -8,11 +8,11 @@ import (
 
 	"github.com/spf13/cobra"
 
-	cal "github.com/robgyiv/availability/internal/calendar"
-	googlecal "github.com/robgyiv/availability/internal/calendar/google"
-	localcal "github.com/robgyiv/availability/internal/calendar/local"
-	urlcal "github.com/robgyiv/availability/internal/calendar/url"
-	"github.com/robgyiv/availability/internal/config"
+	cal "github.com/robgyiv/avail/internal/calendar"
+	googlecal "github.com/robgyiv/avail/internal/calendar/google"
+	localcal "github.com/robgyiv/avail/internal/calendar/local"
+	urlcal "github.com/robgyiv/avail/internal/calendar/url"
+	"github.com/robgyiv/avail/internal/config"
 )
 
 // newAuthCmd creates the auth command.
