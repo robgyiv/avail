@@ -261,6 +261,49 @@ I'm free:
 
 Perfect for pasting into emails, Slack, or other messaging apps.
 
+### Push to API
+
+Push your availability to avail.website to create a shareable link:
+
+```bash
+$ avail push
+```
+
+By default, this pushes availability for the next 5 days. You can customize the number of days:
+
+```bash
+$ avail push --days 7
+```
+
+**Setup:**
+
+1. **Sign up and generate a token:**
+   - Visit [https://avail.website/](https://avail.website/)
+   - Sign up for an account
+   - Generate an API token
+
+2. **Store your API token:**
+   Create a file at `~/.config/avail/credentials` with your token:
+   ```bash
+   echo "avail_your_token_here" > ~/.config/avail/credentials
+   chmod 600 ~/.config/avail/credentials
+   ```
+
+   The token should start with `avail_`. The credentials file is stored with restricted permissions (read/write for owner only).
+
+3. **Push your availability:**
+   ```bash
+   avail push
+   ```
+
+The command will:
+- Calculate your availability using the same logic as `avail show`
+- Transform it to the API format
+- POST it to `https://api.avail.website/v1/availability`
+- Display a success message
+
+**Note:** Your calendar event details never leave your machine. Only the derived availability time slots are sent to the API.
+
 ### Help
 
 View available commands and options:
@@ -269,6 +312,7 @@ View available commands and options:
 $ avail --help
 $ avail show --help
 $ avail copy --help
+$ avail push --help
 ```
 
 ---
@@ -280,6 +324,7 @@ $ avail copy --help
 - ✅ Configuration system
 - ✅ `avail show` command
 - ✅ `avail copy` command
+- ✅ `avail push` command (sync availability to avail.website API)
 - ✅ `avail auth` command (OAuth flow for Google, public URL for Apple)
 - ✅ Google Calendar API integration
 - ✅ Apple/iCloud Calendar integration (public calendar URLs - privacy-first)
