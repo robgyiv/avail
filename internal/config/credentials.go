@@ -74,4 +74,3 @@ func StoreAPIToken(token string) error {
 
 	return nil
 }
-

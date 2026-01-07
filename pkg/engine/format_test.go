@@ -115,4 +115,3 @@ func TestFormatTimeBlockForDay(t *testing.T) {
 		})
 	}
 }
-

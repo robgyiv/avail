@@ -222,4 +222,3 @@ func TestTransformToAPIFormat_APIModelsCompatibility(t *testing.T) {
 	// Verify window is valid WindowRange
 	var _ api.WindowRange = req.Window
 }
-

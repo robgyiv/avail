@@ -88,7 +88,7 @@ func TestProvider_ListEvents_InvalidICalendar(t *testing.T) {
 	}
 
 	provider := NewProviderFromPath(icsPath)
-	
+
 	// Authenticate should succeed (file exists)
 	err = provider.Authenticate(context.Background())
 	if err != nil {
@@ -141,4 +141,3 @@ func TestProvider_LoadToken(t *testing.T) {
 		t.Error("LoadToken() should return error for local provider")
 	}
 }
-

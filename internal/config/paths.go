@@ -43,4 +43,3 @@ func EnsureConfigDir() error {
 
 	return os.MkdirAll(configDir, 0755)
 }
-

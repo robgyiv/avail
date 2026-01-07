@@ -8,12 +8,12 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/robgyiv/availability/internal/api"
 	cal "github.com/robgyiv/availability/internal/calendar"
 	googlecal "github.com/robgyiv/availability/internal/calendar/google"
 	localcal "github.com/robgyiv/availability/internal/calendar/local"
 	urlcal "github.com/robgyiv/availability/internal/calendar/url"
 	"github.com/robgyiv/availability/internal/config"
-	"github.com/robgyiv/availability/internal/api"
 	"github.com/robgyiv/availability/pkg/availability"
 	"github.com/robgyiv/availability/pkg/engine"
 )
@@ -170,4 +170,3 @@ func transformToAPIFormat(blocks []availability.TimeBlock, startDate, endDate ti
 		GeneratedAt: generatedAt,
 	}
 }
-

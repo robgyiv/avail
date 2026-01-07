@@ -236,4 +236,3 @@ func TestClient_PushAvailability_NetworkError(t *testing.T) {
 		t.Error("PushAvailability() should return error for network failure")
 	}
 }
-

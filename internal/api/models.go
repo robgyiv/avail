@@ -4,9 +4,9 @@ package api
 // Matches the OpenAPI spec definition models.UpdateAvailabilityRequest.
 type UpdateAvailabilityRequest struct {
 	Slots       []AvailabilitySlotRequest `json:"slots"`
-	Timezone    string                     `json:"timezone"`
-	Window      WindowRange                `json:"window"`
-	GeneratedAt string                     `json:"generated_at,omitempty"`
+	Timezone    string                    `json:"timezone"`
+	Window      WindowRange               `json:"window"`
+	GeneratedAt string                    `json:"generated_at,omitempty"`
 }
 
 // AvailabilitySlotRequest represents a single availability slot.
@@ -22,4 +22,3 @@ type WindowRange struct {
 	Start string `json:"start"` // ISO date format: YYYY-MM-DD
 	End   string `json:"end"`   // ISO date format: YYYY-MM-DD
 }
-

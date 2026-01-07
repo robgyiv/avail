@@ -131,4 +131,3 @@ func calculateFreeBlocksForDay(
 
 	return blocks
 }
-

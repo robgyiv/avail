@@ -175,11 +175,11 @@ func TestConfig_Validate(t *testing.T) {
 		{
 			name: "missing timezone",
 			config: &Config{
-				Timezone:         "",
-				MeetingDuration:  30 * time.Minute,
-				BufferDuration:   15 * time.Minute,
-				WorkHoursStart:   "09:00",
-				WorkHoursEnd:     "17:00",
+				Timezone:        "",
+				MeetingDuration: 30 * time.Minute,
+				BufferDuration:  15 * time.Minute,
+				WorkHoursStart:  "09:00",
+				WorkHoursEnd:    "17:00",
 			},
 			wantErr: true,
 			errMsg:  "timezone is required",
@@ -187,11 +187,11 @@ func TestConfig_Validate(t *testing.T) {
 		{
 			name: "zero meeting duration",
 			config: &Config{
-				Timezone:         "UTC",
-				MeetingDuration:  0,
-				BufferDuration:   15 * time.Minute,
-				WorkHoursStart:   "09:00",
-				WorkHoursEnd:     "17:00",
+				Timezone:        "UTC",
+				MeetingDuration: 0,
+				BufferDuration:  15 * time.Minute,
+				WorkHoursStart:  "09:00",
+				WorkHoursEnd:    "17:00",
 			},
 			wantErr: true,
 			errMsg:  "meeting_duration must be positive",
@@ -199,11 +199,11 @@ func TestConfig_Validate(t *testing.T) {
 		{
 			name: "negative meeting duration",
 			config: &Config{
-				Timezone:         "UTC",
-				MeetingDuration:  -30 * time.Minute,
-				BufferDuration:   15 * time.Minute,
-				WorkHoursStart:   "09:00",
-				WorkHoursEnd:     "17:00",
+				Timezone:        "UTC",
+				MeetingDuration: -30 * time.Minute,
+				BufferDuration:  15 * time.Minute,
+				WorkHoursStart:  "09:00",
+				WorkHoursEnd:    "17:00",
 			},
 			wantErr: true,
 			errMsg:  "meeting_duration must be positive",
@@ -211,11 +211,11 @@ func TestConfig_Validate(t *testing.T) {
 		{
 			name: "negative buffer duration",
 			config: &Config{
-				Timezone:         "UTC",
-				MeetingDuration:  30 * time.Minute,
-				BufferDuration:   -15 * time.Minute,
-				WorkHoursStart:   "09:00",
-				WorkHoursEnd:     "17:00",
+				Timezone:        "UTC",
+				MeetingDuration: 30 * time.Minute,
+				BufferDuration:  -15 * time.Minute,
+				WorkHoursStart:  "09:00",
+				WorkHoursEnd:    "17:00",
 			},
 			wantErr: true,
 			errMsg:  "buffer_duration must be non-negative",
@@ -223,11 +223,11 @@ func TestConfig_Validate(t *testing.T) {
 		{
 			name: "missing work hours start",
 			config: &Config{
-				Timezone:         "UTC",
-				MeetingDuration:  30 * time.Minute,
-				BufferDuration:   15 * time.Minute,
-				WorkHoursStart:   "",
-				WorkHoursEnd:     "17:00",
+				Timezone:        "UTC",
+				MeetingDuration: 30 * time.Minute,
+				BufferDuration:  15 * time.Minute,
+				WorkHoursStart:  "",
+				WorkHoursEnd:    "17:00",
 			},
 			wantErr: true,
 			errMsg:  "work hours start and end are required",
@@ -235,11 +235,11 @@ func TestConfig_Validate(t *testing.T) {
 		{
 			name: "missing work hours end",
 			config: &Config{
-				Timezone:         "UTC",
-				MeetingDuration:  30 * time.Minute,
-				BufferDuration:   15 * time.Minute,
-				WorkHoursStart:   "09:00",
-				WorkHoursEnd:     "",
+				Timezone:        "UTC",
+				MeetingDuration: 30 * time.Minute,
+				BufferDuration:  15 * time.Minute,
+				WorkHoursStart:  "09:00",
+				WorkHoursEnd:    "",
 			},
 			wantErr: true,
 			errMsg:  "work hours start and end are required",
@@ -274,11 +274,11 @@ func TestConfig_Validate(t *testing.T) {
 		{
 			name: "invalid work hours format",
 			config: &Config{
-				Timezone:         "UTC",
-				MeetingDuration:  30 * time.Minute,
-				BufferDuration:   15 * time.Minute,
-				WorkHoursStart:   "25:00",
-				WorkHoursEnd:     "17:00",
+				Timezone:        "UTC",
+				MeetingDuration: 30 * time.Minute,
+				BufferDuration:  15 * time.Minute,
+				WorkHoursStart:  "25:00",
+				WorkHoursEnd:    "17:00",
 			},
 			wantErr: true,
 		},
@@ -310,7 +310,7 @@ meeting_duration = "30m"
 work_hours_start = "09:00"
 work_hours_end = "17:00"
 [invalid bracket`
-	
+
 	err := os.WriteFile(configPath, []byte(invalidTOML), 0644)
 	if err != nil {
 		t.Fatalf("Failed to write test config: %v", err)
@@ -409,4 +409,3 @@ func TestDefault(t *testing.T) {
 		t.Errorf("Default() calendar provider = %v, want google", cfg.CalendarProvider)
 	}
 }
-

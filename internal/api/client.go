@@ -107,4 +107,3 @@ func handleHTTPError(statusCode int, bodyBytes []byte) error {
 
 	return fmt.Errorf("%s", errorMsg)
 }
-

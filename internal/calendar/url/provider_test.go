@@ -186,34 +186,34 @@ func TestProvider_ListEvents_EmptyResponse(t *testing.T) {
 
 func TestNormalizeCalendarURL(t *testing.T) {
 	tests := []struct {
-		name     string
-		input    string
-		want     string
+		name  string
+		input string
+		want  string
 	}{
 		{
-			name:     "webcal to https",
-			input:    "webcal://example.com/calendar.ics",
-			want:     "https://example.com/calendar.ics",
+			name:  "webcal to https",
+			input: "webcal://example.com/calendar.ics",
+			want:  "https://example.com/calendar.ics",
 		},
 		{
-			name:     "https stays https",
-			input:    "https://example.com/calendar.ics",
-			want:     "https://example.com/calendar.ics",
+			name:  "https stays https",
+			input: "https://example.com/calendar.ics",
+			want:  "https://example.com/calendar.ics",
 		},
 		{
-			name:     "http stays http",
-			input:    "http://example.com/calendar.ics",
-			want:     "http://example.com/calendar.ics",
+			name:  "http stays http",
+			input: "http://example.com/calendar.ics",
+			want:  "http://example.com/calendar.ics",
 		},
 		{
-			name:     "invalid URL",
-			input:    "not-a-url",
-			want:     "",
+			name:  "invalid URL",
+			input: "not-a-url",
+			want:  "",
 		},
 		{
-			name:     "empty string",
-			input:    "",
-			want:     "",
+			name:  "empty string",
+			input: "",
+			want:  "",
 		},
 	}
 
@@ -245,4 +245,3 @@ func TestProvider_LoadToken_InvalidURL(t *testing.T) {
 	// For now, we'll skip this and focus on URL validation
 	t.Skip("Requires keyring mocking")
 }
-

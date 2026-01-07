@@ -39,4 +39,3 @@ func DeleteToken() error {
 
 // ErrTokenNotFound is returned when a token is not found in the keyring.
 var ErrTokenNotFound = fmt.Errorf("token not found in keyring")
-

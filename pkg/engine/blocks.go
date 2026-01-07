@@ -55,4 +55,3 @@ func GroupBlocksByDay(blocks []availability.TimeBlock) []availability.Availabili
 
 	return result
 }
-

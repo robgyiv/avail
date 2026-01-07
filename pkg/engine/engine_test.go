@@ -10,7 +10,7 @@ import (
 func TestCalculateAvailability(t *testing.T) {
 	location := time.UTC
 	workHours := availability.WorkHours{
-		Start: 9 * time.Hour, // 09:00
+		Start: 9 * time.Hour,  // 09:00
 		End:   17 * time.Hour, // 17:00
 	}
 	meetingDuration := 30 * time.Minute
@@ -147,11 +147,11 @@ func TestCalculateAvailability_WithBuffer(t *testing.T) {
 	bufferDuration := 15 * time.Minute
 
 	tests := []struct {
-		name         string
-		events       []availability.Event
-		buffer       time.Duration
-		wantStart    time.Time
-		description  string
+		name        string
+		events      []availability.Event
+		buffer      time.Duration
+		wantStart   time.Time
+		description string
 	}{
 		{
 			name: "buffer applied after single event",
@@ -249,4 +249,3 @@ func TestCalculateAvailability_BackToBackEvents(t *testing.T) {
 		}
 	}
 }
-

@@ -151,4 +151,3 @@ func (p *Provider) ListEvents(ctx context.Context, start, end time.Time) ([]avai
 
 // Ensure Provider implements the calendar.Provider interface.
 var _ cal.Provider = (*Provider)(nil)
-

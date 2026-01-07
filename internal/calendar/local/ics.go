@@ -222,4 +222,3 @@ func unescapeICalText(text string) string {
 	text = strings.ReplaceAll(text, "\\\\", "\\")
 	return text
 }
-

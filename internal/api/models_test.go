@@ -165,4 +165,3 @@ func TestWindowRange_ISODateFormat(t *testing.T) {
 		t.Errorf("End date %q is not valid ISO format: %v", window.End, err)
 	}
 }
-

@@ -26,7 +26,7 @@ func TestCredentialsPath(t *testing.T) {
 
 func TestStoreAPIToken(t *testing.T) {
 	tmpDir := t.TempDir()
-	
+
 	// Override ConfigDir for testing
 	originalConfigDir := os.Getenv("XDG_CONFIG_HOME")
 	defer func() {
@@ -36,7 +36,7 @@ func TestStoreAPIToken(t *testing.T) {
 			os.Setenv("XDG_CONFIG_HOME", originalConfigDir)
 		}
 	}()
-	
+
 	os.Setenv("XDG_CONFIG_HOME", tmpDir)
 
 	tests := []struct {
@@ -111,7 +111,7 @@ func TestStoreAPIToken(t *testing.T) {
 
 func TestLoadAPIToken(t *testing.T) {
 	tmpDir := t.TempDir()
-	
+
 	// Override ConfigDir for testing
 	originalConfigDir := os.Getenv("XDG_CONFIG_HOME")
 	defer func() {
@@ -121,7 +121,7 @@ func TestLoadAPIToken(t *testing.T) {
 			os.Setenv("XDG_CONFIG_HOME", originalConfigDir)
 		}
 	}()
-	
+
 	os.Setenv("XDG_CONFIG_HOME", tmpDir)
 
 	tests := []struct {
@@ -238,7 +238,7 @@ func TestLoadAPIToken(t *testing.T) {
 
 func TestLoadAPIToken_FileNotFound(t *testing.T) {
 	tmpDir := t.TempDir()
-	
+
 	// Override ConfigDir for testing
 	originalConfigDir := os.Getenv("XDG_CONFIG_HOME")
 	defer func() {
@@ -248,7 +248,7 @@ func TestLoadAPIToken_FileNotFound(t *testing.T) {
 			os.Setenv("XDG_CONFIG_HOME", originalConfigDir)
 		}
 	}()
-	
+
 	os.Setenv("XDG_CONFIG_HOME", tmpDir)
 
 	// Ensure file doesn't exist
@@ -265,4 +265,3 @@ func TestLoadAPIToken_FileNotFound(t *testing.T) {
 		t.Error("LoadAPIToken() error message should be helpful")
 	}
 }
-

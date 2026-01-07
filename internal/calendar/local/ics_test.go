@@ -171,7 +171,7 @@ func TestParseICalDateTime_InvalidFormats(t *testing.T) {
 
 func TestParseICalDateTime_ValidFormats(t *testing.T) {
 	tests := []struct {
-		name string
+		name  string
 		input string
 	}{
 		{
@@ -275,34 +275,34 @@ func TestParseICalDuration_ValidFormats(t *testing.T) {
 
 func TestUnescapeICalText(t *testing.T) {
 	tests := []struct {
-		name     string
-		input    string
-		want     string
+		name  string
+		input string
+		want  string
 	}{
 		{
-			name:     "newline escape",
-			input:    "Line1\\nLine2",
-			want:     "Line1\nLine2",
+			name:  "newline escape",
+			input: "Line1\\nLine2",
+			want:  "Line1\nLine2",
 		},
 		{
-			name:     "comma escape",
-			input:    "Item1\\,Item2",
-			want:     "Item1,Item2",
+			name:  "comma escape",
+			input: "Item1\\,Item2",
+			want:  "Item1,Item2",
 		},
 		{
-			name:     "semicolon escape",
-			input:    "Item1\\;Item2",
-			want:     "Item1;Item2",
+			name:  "semicolon escape",
+			input: "Item1\\;Item2",
+			want:  "Item1;Item2",
 		},
 		{
-			name:     "backslash escape",
-			input:    "Path\\\\to\\\\file",
-			want:     "Path\\to\\file",
+			name:  "backslash escape",
+			input: "Path\\\\to\\\\file",
+			want:  "Path\\to\\file",
 		},
 		{
-			name:     "multiple escapes",
-			input:    "Title\\, with\\nnewline",
-			want:     "Title, with\nnewline",
+			name:  "multiple escapes",
+			input: "Title\\, with\\nnewline",
+			want:  "Title, with\nnewline",
 		},
 	}
 
@@ -337,4 +337,3 @@ END:VEVENT`
 		t.Error("parseVEvent() AllDay = false, want true")
 	}
 }
-
