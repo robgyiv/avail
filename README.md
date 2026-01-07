@@ -3,28 +3,33 @@
 Remove manual checking and generate up-to-date availability you can share.
 
 ## What avail is
+
 - A local-first availability generator
 - Privacy-first by design
 - Works in your terminal
 - Produces text you can share with guests easily
 
 ## What avail is not
+
 - A scheduler
 - A booking system
 - A calendar writer
 
 ## How it works
+
 1. Read your calendar (locally where possible)
 2. Derive free/busy availability
 3. Generate human-friendly output
 4. Optionally publish a live link
 
 ## Privacy model
+
 - Event details never leave your machine
 - Only derived availability is shared
-- Read-only access only
+- Read-only access wherever possible
 
 ## Philosophy
+
 Avail assists conversations — it does not automate them.
 
 **NOTE**: This project is under active development and breaking changes are likely.
@@ -121,11 +126,13 @@ Avail requires you to create your own OAuth application for privacy. We don't pr
 
 1. **Configure provider:**
    Edit `~/.config/avail/config.toml`:
+
    ```toml
    calendar_provider = "google"
    ```
 
 2. **Create OAuth credentials:**
+
    - Go to [Google Cloud Console](https://console.cloud.google.com/apis/credentials)
    - Create a new project (or select existing)
    - Enable the Google Calendar API
@@ -135,16 +142,18 @@ Avail requires you to create your own OAuth application for privacy. We don't pr
    - Note your Client ID and Client Secret
 
 3. **Set environment variables:**
+
    ```bash
    export GOOGLE_CLIENT_ID="your-client-id"
    export GOOGLE_CLIENT_SECRET="your-client-secret"
    ```
 
 4. **Authenticate:**
+
    ```bash
    avail auth
    ```
-   
+
    This opens a browser for OAuth authentication. The token is stored securely in your system keyring.
 
 **Privacy:** Your OAuth credentials are used only by your local CLI. Calendar data is processed locally and never sent to any third-party servers.
@@ -154,6 +163,7 @@ Avail requires you to create your own OAuth application for privacy. We don't pr
 Avail can fetch events from any publicly accessible calendar URL that serves iCalendar (.ics) format.
 
 **Supported sources:**
+
 - Apple/iCloud public calendars
 - Google Calendar public feeds
 - CalDAV server public calendars
@@ -163,26 +173,30 @@ Avail can fetch events from any publicly accessible calendar URL that serves iCa
 
 1. **Configure provider:**
    Edit `~/.config/avail/config.toml`:
+
    ```toml
    calendar_provider = "network"
    calendar_url = "https://calendar.example.com/public.ics"
    ```
-   
+
    To get your public calendar URL:
+
    - **Apple/iCloud**: Open Calendar app → Calendars → Info icon → Toggle "Public Calendar" → "Share Link"
    - **Google Calendar**: Calendar Settings → Integrate calendar → Public URL
    - **Other services**: Check your calendar provider's documentation for public feed URLs
 
 2. **Authenticate:**
+
    ```bash
    avail auth
    ```
-   
+
    The URL is validated and stored securely in your system keyring.
 
 **Privacy Note:** Only works with calendars explicitly made public. Private calendars require OAuth authentication (see Google Calendar setup). Public calendar URLs are readable by anyone with the URL.
 
 **URL formats:**
+
 - `https://` URLs (recommended)
 - `http://` URLs (if server doesn't support HTTPS)
 - `webcal://` URLs (automatically converted to `https://`)
@@ -194,29 +208,33 @@ Use a local `.ics` file on your filesystem.
 To export your calendar:
 
 1. Open your calendar application:
+
    - macOS: Calendar.app (File > Export > Export...)
    - Google Calendar: Settings > Export calendar
    - Other: Check your calendar app's export options
 
-2. Export as .ics format and save to: /Users/robbie/.config/avail/calendar.ics
+2. Export as .ics format and note the filepath.
 
 3. **Configure provider:**
    Edit `~/.config/avail/config.toml`:
+
    ```toml
    calendar_provider = "local"
    local_calendar_path = "/path/to/calendar.ics"
    ```
-   
+
    You can use `~` to refer to your home directory:
+
    ```toml
    local_calendar_path = "~/Desktop/calendar.ics"
    ```
 
 4. **Use directly:**
+
    ```bash
    avail show
    ```
-   
+
    No authentication needed - the file is read directly from the filesystem.
 
 ### Show Availability
@@ -224,7 +242,7 @@ To export your calendar:
 Display your availability for the next 5 days:
 
 ```bash
-$ avail show
+avail show
 ```
 
 Output example:
@@ -249,7 +267,7 @@ Time zone: UTC
 Copy formatted availability text to your clipboard:
 
 ```bash
-$ avail copy
+avail copy
 ```
 
 This copies text in the following format:
@@ -268,24 +286,26 @@ Perfect for pasting into emails, Slack, or other messaging apps.
 Push your availability to avail.website to create a shareable link:
 
 ```bash
-$ avail push
+avail push
 ```
 
 By default, this pushes availability for the next 5 days. You can customize the number of days:
 
 ```bash
-$ avail push --days 7
+avail push --days 7
 ```
 
 **Setup:**
 
 1. **Sign up and generate a token:**
+
    - Visit [https://avail.website/](https://avail.website/)
    - Sign up for an account
    - Generate an API token
 
 2. **Store your API token:**
    Create a file at `~/.config/avail/credentials` with your token:
+
    ```bash
    echo "avail_your_token_here" > ~/.config/avail/credentials
    chmod 600 ~/.config/avail/credentials
@@ -294,11 +314,13 @@ $ avail push --days 7
    The token should start with `avail_`. The credentials file is stored with restricted permissions (read/write for owner only).
 
 3. **Push your availability:**
+
    ```bash
    avail push
    ```
 
 The command will:
+
 - Calculate your availability using the same logic as `avail show`
 - Transform it to the API format
 - POST it to `https://api.avail.website/v1/availability`
@@ -311,10 +333,10 @@ The command will:
 View available commands and options:
 
 ```bash
-$ avail --help
-$ avail show --help
-$ avail copy --help
-$ avail push --help
+avail --help
+avail show --help
+avail copy --help
+avail push --help
 ```
 
 ---
@@ -322,6 +344,7 @@ $ avail push --help
 ## Current Status
 
 **Implemented:**
+
 - ✅ Core availability engine
 - ✅ Configuration system
 - ✅ `avail show` command
@@ -332,7 +355,14 @@ $ avail push --help
 - ✅ Apple/iCloud Calendar integration (public calendar URLs - privacy-first)
 
 **In Progress / Planned:**
+
 - ⏳ `avail link` command (shareable links)
 - ⏳ `avail propose` command (interactive TUI for time selection)
+
+---
+
+avail consists of an open-source client and availability computation engine, alongside a hosted service that provides persistence, sharing, rate limiting, and integrations.
+
+The boundary between open and hosted components may evolve over time.
 
 ---
