@@ -46,6 +46,7 @@ func runPush(days int) error {
 		data.Cfg.MeetingDuration,
 		data.Cfg.BufferDuration,
 	)
+	blocks = FilterAvailabilityBlocks(blocks, data.Cfg.IncludeWeekends, data.Location)
 
 	// Transform to API format
 	apiReq := transformToAPIFormat(blocks, data.StartDate, data.EndDate, data.Cfg.Timezone)

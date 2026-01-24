@@ -117,3 +117,20 @@ func LoadAvailabilityData(days int) (*AvailabilityData, error) {
 		EndDate:   endDate,
 	}, nil
 }
+
+func FilterAvailabilityBlocks(blocks []availability.TimeBlock, includeWeekends bool, location *time.Location) []availability.TimeBlock {
+	if includeWeekends {
+		return blocks
+	}
+
+	filtered := make([]availability.TimeBlock, 0, len(blocks))
+	for _, block := range blocks {
+		weekday := block.Start.In(location).Weekday()
+		if weekday == time.Saturday || weekday == time.Sunday {
+			continue
+		}
+		filtered = append(filtered, block)
+	}
+
+	return filtered
+}

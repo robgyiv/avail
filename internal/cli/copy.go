@@ -40,6 +40,7 @@ func runCopy() error {
 		data.Cfg.MeetingDuration,
 		data.Cfg.BufferDuration,
 	)
+	blocks = FilterAvailabilityBlocks(blocks, data.Cfg.IncludeWeekends, data.Location)
 
 	// Group by day
 	availability := engine.GroupBlocksByDay(blocks)
