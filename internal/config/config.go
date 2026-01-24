@@ -16,6 +16,7 @@ type Config struct {
 	BufferDuration    time.Duration `toml:"buffer_duration"`
 	WorkHoursStart    string        `toml:"work_hours_start"`    // e.g., "09:00"
 	WorkHoursEnd      string        `toml:"work_hours_end"`      // e.g., "17:00"
+	IncludeWeekends   bool          `toml:"include_weekends"`    // default false
 	CalendarProvider  string        `toml:"calendar_provider"`   // "google", "network", "local"
 	LocalCalendarPath string        `toml:"local_calendar_path"` // Path to .ics file for local provider
 	CalendarURL       string        `toml:"calendar_url"`        // Public calendar URL for network provider
@@ -61,6 +62,7 @@ type configTOML struct {
 	BufferDuration    string `toml:"buffer_duration"`  // e.g., "15m"
 	WorkHoursStart    string `toml:"work_hours_start"`
 	WorkHoursEnd      string `toml:"work_hours_end"`
+	IncludeWeekends   bool   `toml:"include_weekends"`
 	CalendarProvider  string `toml:"calendar_provider"`
 	LocalCalendarPath string `toml:"local_calendar_path"`
 	CalendarURL       string `toml:"calendar_url"`
@@ -86,6 +88,7 @@ func Load(path string) (*Config, error) {
 		Timezone:          cfgTOML.Timezone,
 		WorkHoursStart:    cfgTOML.WorkHoursStart,
 		WorkHoursEnd:      cfgTOML.WorkHoursEnd,
+		IncludeWeekends:   cfgTOML.IncludeWeekends,
 		CalendarProvider:  cfgTOML.CalendarProvider,
 		LocalCalendarPath: cfgTOML.LocalCalendarPath,
 		CalendarURL:       cfgTOML.CalendarURL,
@@ -191,6 +194,7 @@ func (c *Config) Save(path string) error {
 		BufferDuration    string `toml:"buffer_duration"`
 		WorkHoursStart    string `toml:"work_hours_start"`
 		WorkHoursEnd      string `toml:"work_hours_end"`
+		IncludeWeekends   bool   `toml:"include_weekends"`
 		CalendarProvider  string `toml:"calendar_provider"`
 		LocalCalendarPath string `toml:"local_calendar_path"`
 		CalendarURL       string `toml:"calendar_url"`
@@ -202,6 +206,7 @@ func (c *Config) Save(path string) error {
 		BufferDuration:    c.BufferDuration.String(),
 		WorkHoursStart:    c.WorkHoursStart,
 		WorkHoursEnd:      c.WorkHoursEnd,
+		IncludeWeekends:   c.IncludeWeekends,
 		CalendarProvider:  c.CalendarProvider,
 		LocalCalendarPath: c.LocalCalendarPath,
 		CalendarURL:       c.CalendarURL,
@@ -223,6 +228,7 @@ func Default() *Config {
 		BufferDuration:   15 * time.Minute,
 		WorkHoursStart:   "09:00",
 		WorkHoursEnd:     "17:00",
+		IncludeWeekends:  false,
 		CalendarProvider: "google",
 	}
 }

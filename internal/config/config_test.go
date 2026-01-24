@@ -367,6 +367,50 @@ timezone = "UTC"`,
 	}
 }
 
+func TestLoad_IncludeWeekends(t *testing.T) {
+	tests := []struct {
+		name     string
+		tomlData string
+		want     bool
+	}{
+		{
+			name:     "include weekends true",
+			tomlData: "include_weekends = true\n",
+			want:     true,
+		},
+		{
+			name:     "include weekends false",
+			tomlData: "include_weekends = false\n",
+			want:     false,
+		},
+		{
+			name:     "include weekends default",
+			tomlData: "timezone = \"UTC\"\n",
+			want:     false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tmpDir := t.TempDir()
+			configPath := filepath.Join(tmpDir, "config.toml")
+
+			err := os.WriteFile(configPath, []byte(tt.tomlData), 0644)
+			if err != nil {
+				t.Fatalf("Failed to write test config: %v", err)
+			}
+
+			cfg, err := Load(configPath)
+			if err != nil {
+				t.Fatalf("Load() error = %v", err)
+			}
+			if cfg.IncludeWeekends != tt.want {
+				t.Errorf("Load() include weekends = %v, want %v", cfg.IncludeWeekends, tt.want)
+			}
+		})
+	}
+}
+
 func TestLoad_NonexistentFile(t *testing.T) {
 	// Load should return default config for nonexistent file
 	tmpDir := t.TempDir()
@@ -407,5 +451,8 @@ func TestDefault(t *testing.T) {
 	}
 	if cfg.CalendarProvider != "google" {
 		t.Errorf("Default() calendar provider = %v, want google", cfg.CalendarProvider)
+	}
+	if cfg.IncludeWeekends {
+		t.Errorf("Default() include weekends = %v, want false", cfg.IncludeWeekends)
 	}
 }

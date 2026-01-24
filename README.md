@@ -82,6 +82,7 @@ On first run, `avail` will create a default configuration file at `~/.config/ava
 - `meeting_duration` - Default meeting duration (default: 30 minutes)
 - `work_hours_start` - Start of work day (default: "09:00")
 - `work_hours_end` - End of work day (default: "17:00")
+- `include_weekends` - Include Saturday/Sunday availability (default: false)
 - `calendar_provider` - Calendar provider: `"google"`, `"network"`, or `"local"` (default: "google")
 - `calendar_url` - Public calendar URL (required when `calendar_provider = "network"`)
 - `local_calendar_path` - Path to local .ics file (required when `calendar_provider = "local"`)
@@ -93,6 +94,7 @@ timezone = "America/New_York"
 meeting_duration = "30m"
 work_hours_start = "09:00"
 work_hours_end = "17:00"
+include_weekends = false
 calendar_provider = "google"
 ```
 
