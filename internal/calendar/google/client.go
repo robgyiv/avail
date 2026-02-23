@@ -17,17 +17,26 @@ import (
 
 // Provider implements the calendar.Provider interface for Google Calendar.
 type Provider struct {
-	token  *oauth2.Token
-	config *oauth2.Config
-	client *calendar.Service
+	token      *oauth2.Token
+	config     *oauth2.Config
+	client     *calendar.Service
+	calendarID string // Calendar ID: "primary", email address, or other calendar ID
 }
 
 // NewProvider creates a new Google Calendar provider.
-// For MVP, we'll use a simplified approach with client ID/secret from environment or config.
+// Defaults to "primary" calendar. Use SetCalendarID to change it.
 func NewProvider() *Provider {
 	// For MVP, we'll need OAuth credentials
 	// In production, these would come from config or environment variables
-	return &Provider{}
+	return &Provider{
+		calendarID: "primary", // Default to primary calendar
+	}
+}
+
+// SetCalendarID sets the calendar ID to fetch events from.
+// Can be "primary" for the main calendar or an email address for other calendars.
+func (p *Provider) SetCalendarID(calendarID string) {
+	p.calendarID = calendarID
 }
 
 // Authenticate performs OAuth2 authentication and stores the token.
@@ -123,14 +132,14 @@ func (p *Provider) LoadToken(ctx context.Context) error {
 	return nil
 }
 
-// ListEvents fetches events from Google Calendar.
+// ListEvents fetches events from the specified Google Calendar.
 func (p *Provider) ListEvents(ctx context.Context, start, end time.Time) ([]availability.Event, error) {
 	if p.client == nil {
 		return nil, fmt.Errorf("not authenticated")
 	}
 
-	// Fetch events from primary calendar
-	events, err := p.client.Events.List("primary").
+	// Fetch events from the configured calendar
+	events, err := p.client.Events.List(p.calendarID).
 		TimeMin(start.Format(time.RFC3339)).
 		TimeMax(end.Format(time.RFC3339)).
 		SingleEvents(true).

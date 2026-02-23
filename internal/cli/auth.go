@@ -4,14 +4,10 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"strings"
 
 	"github.com/spf13/cobra"
 
-	cal "github.com/robgyiv/avail/internal/calendar"
 	googlecal "github.com/robgyiv/avail/internal/calendar/google"
-	localcal "github.com/robgyiv/avail/internal/calendar/local"
-	urlcal "github.com/robgyiv/avail/internal/calendar/url"
 	"github.com/robgyiv/avail/internal/config"
 )
 
@@ -19,15 +15,19 @@ import (
 func newAuthCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "auth",
-		Short: "Authenticate with calendar provider",
-		Long: `Authenticate with your calendar provider based on your configuration.
+		Short: "Authenticate with calendar provider(s)",
+		Long: `Authenticate with your configured calendar provider(s).
 
-The provider is determined by the calendar_provider setting in your config file.
 Credentials are stored securely in your system keyring.
 
-Before running this command, ensure your config file (~/.config/avail/config.toml) has:
-  - calendar_provider set to "google", "network", or "local"
-  - Provider-specific settings (calendar_url for network, local_calendar_path for local)`,
+Configure your calendars in ~/.config/avail/config.toml:
+  [[calendars]]
+  provider = "google"
+  calendar_id = "primary"  # or email address for other calendars
+  
+  [[calendars]]
+  provider = "network"
+  url = "https://example.com/calendar.ics"`,
 		RunE: runAuth,
 	}
 
@@ -43,70 +43,80 @@ func runAuth(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to load config: %w", err)
 	}
 
-	// Get provider from config only
-	providerName := cfg.CalendarProvider
-	if providerName == "" {
-		return fmt.Errorf("calendar_provider not set in config file\n\nSet calendar_provider in ~/.config/avail/config.toml:\n  calendar_provider = \"google\"  # or \"network\" or \"local\"")
+	if len(cfg.Calendars) == 0 {
+		return fmt.Errorf("no calendars configured\n\nConfigure calendars in ~/.config/avail/config.toml:\n  [[calendars]]\n  provider = \"google\"\n  calendar_id = \"primary\"")
 	}
 
-	// Create provider and authenticate based on provider from config
-	var provider cal.Provider
-	switch providerName {
-	case "google":
-		// Get OAuth credentials from environment
-		clientID := os.Getenv("GOOGLE_CLIENT_ID")
-		clientSecret := os.Getenv("GOOGLE_CLIENT_SECRET")
+	// Authenticate each calendar that requires it
+	googleCalsCount := 0
+	authSuccess := 0
+	authFailed := 0
 
-		if clientID == "" || clientSecret == "" {
-			fmt.Fprintf(os.Stderr, "Error: OAuth credentials not found.\n\n")
-			fmt.Fprintf(os.Stderr, "Please set the following environment variables:\n")
-			fmt.Fprintf(os.Stderr, "  export GOOGLE_CLIENT_ID=\"your-client-id\"\n")
-			fmt.Fprintf(os.Stderr, "  export GOOGLE_CLIENT_SECRET=\"your-client-secret\"\n\n")
-			fmt.Fprintf(os.Stderr, "To get OAuth credentials:\n")
-			fmt.Fprintf(os.Stderr, "1. Go to https://console.cloud.google.com/apis/credentials\n")
-			fmt.Fprintf(os.Stderr, "2. Create OAuth 2.0 Client ID (Application type: Desktop app)\n")
-			fmt.Fprintf(os.Stderr, "3. Add http://localhost/callback as an authorized redirect URI\n\n")
-			return fmt.Errorf("OAuth credentials required")
-		}
-
-		provider = googlecal.NewProvider()
-
-	case "network":
-		// Get public calendar URL from config
-		calendarURL := cfg.CalendarURL
-		if calendarURL == "" {
-			return fmt.Errorf("calendar_url not set in config file\n\nSet calendar_url in ~/.config/avail/config.toml:\n  calendar_url = \"https://calendar.example.com/public.ics\"")
-		}
-
-		provider = urlcal.NewProviderFromURL(calendarURL)
-
-	case "local":
-		// Get local .ics file path from config
-		icsPath := cfg.LocalCalendarPath
-		if icsPath == "" {
-			return fmt.Errorf("local_calendar_path not set in config file\n\nSet local_calendar_path in ~/.config/avail/config.toml:\n  local_calendar_path = \"/path/to/calendar.ics\"")
-		}
-
-		// Expand ~ to home directory
-		if strings.HasPrefix(icsPath, "~/") {
-			homeDir, err := os.UserHomeDir()
-			if err != nil {
-				return fmt.Errorf("failed to get home directory: %w", err)
+	for i, calCfg := range cfg.Calendars {
+		switch calCfg.Provider {
+		case "google":
+			googleCalsCount++
+			provider := googlecal.NewProvider()
+			if calCfg.CalendarID != "" {
+				provider.SetCalendarID(calCfg.CalendarID)
 			}
-			icsPath = strings.Replace(icsPath, "~", homeDir, 1)
+
+			// Only show Google OAuth prompt once per auth session
+			if googleCalsCount == 1 {
+				// Get OAuth credentials from environment
+				clientID := os.Getenv("GOOGLE_CLIENT_ID")
+				clientSecret := os.Getenv("GOOGLE_CLIENT_SECRET")
+
+				if clientID == "" || clientSecret == "" {
+					fmt.Fprintf(os.Stderr, "Error: OAuth credentials not found.\n\n")
+					fmt.Fprintf(os.Stderr, "Please set the following environment variables:\n")
+					fmt.Fprintf(os.Stderr, "  export GOOGLE_CLIENT_ID=\"your-client-id\"\n")
+					fmt.Fprintf(os.Stderr, "  export GOOGLE_CLIENT_SECRET=\"your-client-secret\"\n\n")
+					fmt.Fprintf(os.Stderr, "To get OAuth credentials:\n")
+					fmt.Fprintf(os.Stderr, "1. Go to https://console.cloud.google.com/apis/credentials\n")
+					fmt.Fprintf(os.Stderr, "2. Create OAuth 2.0 Client ID (Application type: Desktop app)\n")
+					fmt.Fprintf(os.Stderr, "3. Add http://localhost/callback as an authorized redirect URI\n\n")
+					authFailed++
+					continue
+				}
+			}
+
+			if err := provider.Authenticate(ctx); err != nil {
+				fmt.Fprintf(os.Stderr, "⚠️  Calendar %d (%s): authentication failed: %v\n", i+1, calCfg.Provider, err)
+				authFailed++
+				continue
+			}
+
+			calIDDisplay := calCfg.CalendarID
+			if calIDDisplay == "" {
+				calIDDisplay = "primary"
+			}
+			fmt.Printf("✓ Google Calendar authenticated (calendar_id: %s)\n", calIDDisplay)
+			authSuccess++
+
+		case "network":
+			// Network calendars don't require authentication
+			fmt.Printf("✓ Network calendar configured: %s\n", calCfg.URL)
+			authSuccess++
+
+		case "local":
+			// Local calendars don't require authentication
+			fmt.Printf("✓ Local calendar configured: %s\n", calCfg.Path)
+			authSuccess++
+
+		default:
+			fmt.Fprintf(os.Stderr, "⚠️  Calendar %d: unknown provider '%s'\n", i+1, calCfg.Provider)
+			authFailed++
 		}
-
-		provider = localcal.NewProviderFromPath(icsPath)
-
-	default:
-		return fmt.Errorf("unknown provider: %s (supported: google, network, local)\n\nSet calendar_provider in ~/.config/avail/config.toml", providerName)
 	}
 
-	// Authenticate (stores credentials in keyring)
-	if err := provider.Authenticate(ctx); err != nil {
-		return fmt.Errorf("authentication failed: %w", err)
+	if authSuccess == 0 {
+		return fmt.Errorf("failed to authenticate any calendars")
 	}
 
-	fmt.Printf("✓ Calendar connected (read-only) - Provider: %s\n", providerName)
+	if authFailed > 0 {
+		fmt.Fprintf(os.Stderr, "\n⚠️  %d calendar(s) failed to authenticate. Check your configuration.\n", authFailed)
+	}
+
 	return nil
 }
