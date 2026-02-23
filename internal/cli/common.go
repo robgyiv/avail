@@ -3,13 +3,10 @@ package cli
 import (
 	"context"
 	"fmt"
-	"os"
 	"time"
 
 	cal "github.com/robgyiv/avail/internal/calendar"
-	googlecal "github.com/robgyiv/avail/internal/calendar/google"
-	localcal "github.com/robgyiv/avail/internal/calendar/local"
-	urlcal "github.com/robgyiv/avail/internal/calendar/url"
+	"github.com/robgyiv/avail/internal/calendar/aggregate"
 	"github.com/robgyiv/avail/internal/config"
 	"github.com/robgyiv/avail/pkg/availability"
 )
@@ -49,51 +46,16 @@ func LoadAvailabilityData(days int) (*AvailabilityData, error) {
 		return nil, fmt.Errorf("invalid work hours: %w", err)
 	}
 
-	// Create calendar provider based on config
-	var provider cal.Provider
-	providerName := cfg.CalendarProvider
-	if providerName == "" {
-		// Migration: if LocalCalendarPath is set, assume local provider
-		if cfg.LocalCalendarPath != "" {
-			providerName = "local"
-		} else {
-			providerName = "google" // Default
-		}
+	// Create aggregate provider from all configured calendars
+	aggProvider, err := aggregate.NewProvider(cfg.Calendars)
+	if err != nil {
+		return nil, fmt.Errorf("failed to initialize calendars: %w", err)
 	}
 
-	switch providerName {
-	case "google":
-		provider = googlecal.NewProvider()
-	case "network":
-		if cfg.CalendarURL != "" {
-			provider = urlcal.NewProviderFromURL(cfg.CalendarURL)
-		} else {
-			provider = urlcal.NewProvider()
-		}
-	case "local":
-		if cfg.LocalCalendarPath == "" {
-			return nil, fmt.Errorf("local_calendar_path not set in config file\n\nSet local_calendar_path in ~/.config/avail/config.toml:\n  local_calendar_path = \"/path/to/calendar.ics\"")
-		}
-		provider = localcal.NewProviderFromPath(cfg.LocalCalendarPath)
-	default:
-		return nil, fmt.Errorf("unknown provider: %s (supported: google, network, local)", providerName)
-	}
+	// Print any warnings about calendars that failed to load
+	aggProvider.PrintWarnings()
 
-	// For providers that need authentication (google, network), load credentials from keyring
-	if providerName != "local" {
-		if !provider.IsAuthenticated() {
-			// Try to load token (provider-specific)
-			if loadable, ok := provider.(interface{ LoadToken(context.Context) error }); ok {
-				if err := loadable.LoadToken(ctx); err != nil {
-					fmt.Fprintf(os.Stderr, "Not authenticated. Please run 'avail auth' first.\n")
-					return nil, err
-				}
-			} else {
-				fmt.Fprintf(os.Stderr, "Not authenticated. Please run 'avail auth' first.\n")
-				return nil, fmt.Errorf("not authenticated")
-			}
-		}
-	}
+	var provider cal.Provider = aggProvider
 
 	// Calculate date range
 	now := time.Now().In(location)

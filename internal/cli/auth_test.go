@@ -1,40 +1,29 @@
 package cli
 
 import (
-	"os"
 	"path/filepath"
 	"testing"
 
 	"github.com/robgyiv/avail/internal/config"
 )
 
-func TestRunAuth_MissingCalendarProvider(t *testing.T) {
-	// Create a temporary config file without calendar_provider
+func TestRunAuth_MissingCalendars(t *testing.T) {
+	// Create a temporary config file without calendars
 	tmpDir := t.TempDir()
 	configPath := filepath.Join(tmpDir, "config.toml")
 
 	cfg := config.Default()
-	cfg.CalendarProvider = "" // Empty provider
+	cfg.Calendars = []config.Calendar{} // Empty calendars list
 	err := cfg.Save(configPath)
 	if err != nil {
 		t.Fatalf("Failed to save test config: %v", err)
 	}
 
-	// Temporarily override config path
-	originalPath := os.Getenv("XDG_CONFIG_HOME")
-	defer func() {
-		if originalPath != "" {
-			os.Setenv("XDG_CONFIG_HOME", originalPath)
-		} else {
-			os.Unsetenv("XDG_CONFIG_HOME")
-		}
-	}()
-
 	// This test would require mocking the config loading, which is complex
 	// Instead, we test the error message format
-	errMsg := "calendar_provider not set in config file"
+	errMsg := "no calendars configured"
 	if errMsg == "" {
-		t.Error("Error message should guide user to set calendar_provider")
+		t.Error("Error message should guide user to configure calendars")
 	}
 }
 

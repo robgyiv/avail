@@ -161,14 +161,16 @@ func TestConfig_Validate(t *testing.T) {
 		errMsg  string
 	}{
 		{
-			name: "valid config",
+			name: "valid config with google calendar",
 			config: &Config{
-				Timezone:         "America/New_York",
-				MeetingDuration:  30 * time.Minute,
-				BufferDuration:   15 * time.Minute,
-				WorkHoursStart:   "09:00",
-				WorkHoursEnd:     "17:00",
-				CalendarProvider: "google",
+				Timezone:        "America/New_York",
+				MeetingDuration: 30 * time.Minute,
+				BufferDuration:  15 * time.Minute,
+				WorkHoursStart:  "09:00",
+				WorkHoursEnd:    "17:00",
+				Calendars: []Calendar{
+					{Provider: "google", CalendarID: "primary"},
+				},
 			},
 			wantErr: false,
 		},
@@ -247,27 +249,29 @@ func TestConfig_Validate(t *testing.T) {
 		{
 			name: "local provider missing path",
 			config: &Config{
-				Timezone:          "UTC",
-				MeetingDuration:   30 * time.Minute,
-				BufferDuration:    15 * time.Minute,
-				WorkHoursStart:    "09:00",
-				WorkHoursEnd:      "17:00",
-				CalendarProvider:  "local",
-				LocalCalendarPath: "",
+				Timezone:        "UTC",
+				MeetingDuration: 30 * time.Minute,
+				BufferDuration:  15 * time.Minute,
+				WorkHoursStart:  "09:00",
+				WorkHoursEnd:    "17:00",
+				Calendars: []Calendar{
+					{Provider: "local", Path: ""},
+				},
 			},
 			wantErr: true,
-			errMsg:  "local_calendar_path is required when calendar_provider is 'local'",
+			errMsg:  "calendars[0]: path is required for local provider",
 		},
 		{
 			name: "local provider with path",
 			config: &Config{
-				Timezone:          "UTC",
-				MeetingDuration:   30 * time.Minute,
-				BufferDuration:    15 * time.Minute,
-				WorkHoursStart:    "09:00",
-				WorkHoursEnd:      "17:00",
-				CalendarProvider:  "local",
-				LocalCalendarPath: "/path/to/calendar.ics",
+				Timezone:        "UTC",
+				MeetingDuration: 30 * time.Minute,
+				BufferDuration:  15 * time.Minute,
+				WorkHoursStart:  "09:00",
+				WorkHoursEnd:    "17:00",
+				Calendars: []Calendar{
+					{Provider: "local", Path: "/path/to/calendar.ics"},
+				},
 			},
 			wantErr: false,
 		},
@@ -449,8 +453,8 @@ func TestDefault(t *testing.T) {
 	if cfg.WorkHoursEnd != "17:00" {
 		t.Errorf("Default() work hours end = %v, want 17:00", cfg.WorkHoursEnd)
 	}
-	if cfg.CalendarProvider != "google" {
-		t.Errorf("Default() calendar provider = %v, want google", cfg.CalendarProvider)
+	if len(cfg.Calendars) != 1 || cfg.Calendars[0].Provider != "google" {
+		t.Errorf("Default() calendars = %v, want one google calendar", cfg.Calendars)
 	}
 	if cfg.IncludeWeekends {
 		t.Errorf("Default() include weekends = %v, want false", cfg.IncludeWeekends)

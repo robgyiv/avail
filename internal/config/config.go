@@ -9,17 +9,23 @@ import (
 	"github.com/robgyiv/avail/pkg/availability"
 )
 
+// Calendar represents a single calendar configuration.
+type Calendar struct {
+	Provider   string `toml:"provider"`              // "google", "network", "local"
+	CalendarID string `toml:"calendar_id,omitempty"` // For Google Calendar: "primary" or email address
+	URL        string `toml:"url,omitempty"`         // For network provider: public calendar URL
+	Path       string `toml:"path,omitempty"`        // For local provider: path to .ics file
+}
+
 // Config represents the application configuration.
 type Config struct {
-	Timezone          string        `toml:"timezone"`
-	MeetingDuration   time.Duration `toml:"meeting_duration"`
-	BufferDuration    time.Duration `toml:"buffer_duration"`
-	WorkHoursStart    string        `toml:"work_hours_start"`    // e.g., "09:00"
-	WorkHoursEnd      string        `toml:"work_hours_end"`      // e.g., "17:00"
-	IncludeWeekends   bool          `toml:"include_weekends"`    // default false
-	CalendarProvider  string        `toml:"calendar_provider"`   // "google", "network", "local"
-	LocalCalendarPath string        `toml:"local_calendar_path"` // Path to .ics file for local provider
-	CalendarURL       string        `toml:"calendar_url"`        // Public calendar URL for network provider
+	Timezone        string        `toml:"timezone"`
+	MeetingDuration time.Duration `toml:"meeting_duration"`
+	BufferDuration  time.Duration `toml:"buffer_duration"`
+	WorkHoursStart  string        `toml:"work_hours_start"` // e.g., "09:00"
+	WorkHoursEnd    string        `toml:"work_hours_end"`   // e.g., "17:00"
+	IncludeWeekends bool          `toml:"include_weekends"` // default false
+	Calendars       []Calendar    `toml:"calendars"`        // Multiple calendars to aggregate
 }
 
 // WorkHours returns the WorkHours struct from config.
@@ -57,15 +63,13 @@ func parseTime(s string) (time.Duration, error) {
 
 // configTOML is an intermediate struct for TOML unmarshaling that handles duration strings.
 type configTOML struct {
-	Timezone          string `toml:"timezone"`
-	MeetingDuration   string `toml:"meeting_duration"` // e.g., "30m"
-	BufferDuration    string `toml:"buffer_duration"`  // e.g., "15m"
-	WorkHoursStart    string `toml:"work_hours_start"`
-	WorkHoursEnd      string `toml:"work_hours_end"`
-	IncludeWeekends   bool   `toml:"include_weekends"`
-	CalendarProvider  string `toml:"calendar_provider"`
-	LocalCalendarPath string `toml:"local_calendar_path"`
-	CalendarURL       string `toml:"calendar_url"`
+	Timezone        string     `toml:"timezone"`
+	MeetingDuration string     `toml:"meeting_duration"` // e.g., "30m"
+	BufferDuration  string     `toml:"buffer_duration"`  // e.g., "15m"
+	WorkHoursStart  string     `toml:"work_hours_start"`
+	WorkHoursEnd    string     `toml:"work_hours_end"`
+	IncludeWeekends bool       `toml:"include_weekends"`
+	Calendars       []Calendar `toml:"calendars"`
 }
 
 // Load reads and parses the config file.
@@ -85,13 +89,11 @@ func Load(path string) (*Config, error) {
 	}
 
 	cfg := &Config{
-		Timezone:          cfgTOML.Timezone,
-		WorkHoursStart:    cfgTOML.WorkHoursStart,
-		WorkHoursEnd:      cfgTOML.WorkHoursEnd,
-		IncludeWeekends:   cfgTOML.IncludeWeekends,
-		CalendarProvider:  cfgTOML.CalendarProvider,
-		LocalCalendarPath: cfgTOML.LocalCalendarPath,
-		CalendarURL:       cfgTOML.CalendarURL,
+		Timezone:        cfgTOML.Timezone,
+		WorkHoursStart:  cfgTOML.WorkHoursStart,
+		WorkHoursEnd:    cfgTOML.WorkHoursEnd,
+		IncludeWeekends: cfgTOML.IncludeWeekends,
+		Calendars:       cfgTOML.Calendars,
 	}
 
 	// Parse durations from string format (e.g., "30m", "15m")
@@ -120,9 +122,6 @@ func Load(path string) (*Config, error) {
 	}
 	if cfg.Timezone == "" {
 		cfg.Timezone = "UTC"
-	}
-	if cfg.CalendarProvider == "" {
-		cfg.CalendarProvider = "google"
 	}
 
 	return cfg, nil
@@ -172,8 +171,28 @@ func (c *Config) Validate() error {
 		return fmt.Errorf("work hours start and end are required")
 	}
 
-	if c.CalendarProvider == "local" && c.LocalCalendarPath == "" {
-		return fmt.Errorf("local_calendar_path is required when calendar_provider is 'local'")
+	if len(c.Calendars) == 0 {
+		return fmt.Errorf("at least one calendar must be configured in [[calendars]] section")
+	}
+
+	for i, cal := range c.Calendars {
+		if cal.Provider == "" {
+			return fmt.Errorf("calendars[%d]: provider is required", i)
+		}
+		switch cal.Provider {
+		case "google":
+			// Google provider doesn't require calendar_id in config; defaults to "primary"
+		case "network":
+			if cal.URL == "" {
+				return fmt.Errorf("calendars[%d]: url is required for network provider", i)
+			}
+		case "local":
+			if cal.Path == "" {
+				return fmt.Errorf("calendars[%d]: path is required for local provider", i)
+			}
+		default:
+			return fmt.Errorf("calendars[%d]: unknown provider '%s' (supported: google, network, local)", i, cal.Provider)
+		}
 	}
 
 	_, err := c.WorkHours()
@@ -189,27 +208,23 @@ func (c *Config) Validate() error {
 func (c *Config) Save(path string) error {
 	// Create a struct with string durations for TOML marshaling
 	type configSave struct {
-		Timezone          string `toml:"timezone"`
-		MeetingDuration   string `toml:"meeting_duration"`
-		BufferDuration    string `toml:"buffer_duration"`
-		WorkHoursStart    string `toml:"work_hours_start"`
-		WorkHoursEnd      string `toml:"work_hours_end"`
-		IncludeWeekends   bool   `toml:"include_weekends"`
-		CalendarProvider  string `toml:"calendar_provider"`
-		LocalCalendarPath string `toml:"local_calendar_path"`
-		CalendarURL       string `toml:"calendar_url"`
+		Timezone        string     `toml:"timezone"`
+		MeetingDuration string     `toml:"meeting_duration"`
+		BufferDuration  string     `toml:"buffer_duration"`
+		WorkHoursStart  string     `toml:"work_hours_start"`
+		WorkHoursEnd    string     `toml:"work_hours_end"`
+		IncludeWeekends bool       `toml:"include_weekends"`
+		Calendars       []Calendar `toml:"calendars"`
 	}
 
 	cfgSave := configSave{
-		Timezone:          c.Timezone,
-		MeetingDuration:   c.MeetingDuration.String(),
-		BufferDuration:    c.BufferDuration.String(),
-		WorkHoursStart:    c.WorkHoursStart,
-		WorkHoursEnd:      c.WorkHoursEnd,
-		IncludeWeekends:   c.IncludeWeekends,
-		CalendarProvider:  c.CalendarProvider,
-		LocalCalendarPath: c.LocalCalendarPath,
-		CalendarURL:       c.CalendarURL,
+		Timezone:        c.Timezone,
+		MeetingDuration: c.MeetingDuration.String(),
+		BufferDuration:  c.BufferDuration.String(),
+		WorkHoursStart:  c.WorkHoursStart,
+		WorkHoursEnd:    c.WorkHoursEnd,
+		IncludeWeekends: c.IncludeWeekends,
+		Calendars:       c.Calendars,
 	}
 
 	data, err := toml.Marshal(cfgSave)
@@ -223,13 +238,18 @@ func (c *Config) Save(path string) error {
 // Default returns a default configuration.
 func Default() *Config {
 	return &Config{
-		Timezone:         "UTC",
-		MeetingDuration:  30 * time.Minute,
-		BufferDuration:   15 * time.Minute,
-		WorkHoursStart:   "09:00",
-		WorkHoursEnd:     "17:00",
-		IncludeWeekends:  false,
-		CalendarProvider: "google",
+		Timezone:        "UTC",
+		MeetingDuration: 30 * time.Minute,
+		BufferDuration:  15 * time.Minute,
+		WorkHoursStart:  "09:00",
+		WorkHoursEnd:    "17:00",
+		IncludeWeekends: false,
+		Calendars: []Calendar{
+			{
+				Provider:   "google",
+				CalendarID: "primary",
+			},
+		},
 	}
 }
 
