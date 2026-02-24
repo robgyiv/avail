@@ -118,7 +118,7 @@ func Load(path string) (*Config, error) {
 		cfg.MeetingDuration = 30 * time.Minute
 	}
 	if cfg.BufferDuration == 0 {
-		cfg.BufferDuration = 15 * time.Minute
+		cfg.BufferDuration = 10 * time.Minute
 	}
 	if cfg.Timezone == "" {
 		cfg.Timezone = "UTC"
