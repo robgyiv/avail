@@ -87,6 +87,11 @@ func calculateFreeBlocksForDay(
 	currentTime := dayStart
 
 	for _, event := range sortedEvents {
+		// Skip events that start after work hours end
+		if event.Start.After(dayEnd) {
+			continue
+		}
+
 		eventStart := event.Start
 		if eventStart.Before(dayStart) {
 			eventStart = dayStart
@@ -96,13 +101,24 @@ func calculateFreeBlocksForDay(
 			eventEnd = dayEnd
 		}
 
-		// If there's a gap before the event, add it as a free block
-		if currentTime.Before(eventStart) {
-			gapDuration := eventStart.Sub(currentTime)
+		// Calculate the buffer zone before the event
+		// Only apply buffer before if the event's original start is within work hours
+		bufferStart := currentTime
+		if event.Start.Before(dayEnd) && event.Start.After(dayStart) {
+			// Event starts within work hours, apply buffer before it
+			bufferStart = eventStart.Add(-bufferDuration)
+			if bufferStart.Before(dayStart) {
+				bufferStart = dayStart
+			}
+		}
+
+		// If there's a gap before the buffer zone, add it as a free block
+		if currentTime.Before(bufferStart) {
+			gapDuration := bufferStart.Sub(currentTime)
 			if gapDuration >= meetingDuration {
 				blocks = append(blocks, availability.TimeBlock{
 					Start: currentTime,
-					End:   eventStart,
+					End:   bufferStart,
 				})
 			}
 		}
