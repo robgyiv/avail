@@ -12,21 +12,25 @@ import (
 
 // newCopyCmd creates the copy command.
 func newCopyCmd() *cobra.Command {
+	var days int
+
 	cmd := &cobra.Command{
 		Use:   "copy",
 		Short: "Copy availability to clipboard",
 		Long:  "Copies formatted availability text to the clipboard for pasting.",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return runCopy()
+			return runCopy(days)
 		},
 	}
+
+	cmd.Flags().IntVarP(&days, "days", "d", 0, "Number of working days to calculate availability for (default: num_days_ahead from config)")
 
 	return cmd
 }
 
-func runCopy() error {
-	// Load availability data (next 5 days)
-	data, err := LoadAvailabilityData(5)
+func runCopy(days int) error {
+	// Load availability data (next num_days_ahead working days, per config)
+	data, err := LoadAvailabilityData(days)
 	if err != nil {
 		return err
 	}
@@ -40,7 +44,7 @@ func runCopy() error {
 		data.Cfg.MeetingDuration,
 		data.Cfg.BufferDuration,
 	)
-	blocks = FilterAvailabilityBlocks(blocks, data.Cfg.IncludeWeekends, data.Location)
+	blocks = FilterAvailabilityBlocks(blocks, data.Cfg.WeekStart, data.Cfg.WeekEnd, data.Location)
 
 	// Group by day
 	availability := engine.GroupBlocksByDay(blocks)

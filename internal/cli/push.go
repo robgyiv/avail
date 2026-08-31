@@ -25,7 +25,7 @@ func newPushCmd() *cobra.Command {
 		},
 	}
 
-	cmd.Flags().IntVarP(&days, "days", "d", 5, "Number of days to calculate availability for")
+	cmd.Flags().IntVarP(&days, "days", "d", 0, "Number of working days to calculate availability for (default: num_days_ahead from config)")
 
 	return cmd
 }
@@ -46,7 +46,7 @@ func runPush(days int) error {
 		data.Cfg.MeetingDuration,
 		data.Cfg.BufferDuration,
 	)
-	blocks = FilterAvailabilityBlocks(blocks, data.Cfg.IncludeWeekends, data.Location)
+	blocks = FilterAvailabilityBlocks(blocks, data.Cfg.WeekStart, data.Cfg.WeekEnd, data.Location)
 
 	// Transform to API format
 	apiReq := transformToAPIFormat(blocks, data.StartDate, data.EndDate, data.Cfg.Timezone)
@@ -63,7 +63,7 @@ func runPush(days int) error {
 		return fmt.Errorf("failed to push availability: %w", err)
 	}
 
-	fmt.Printf("✓ Availability pushed successfully (next %d days)\n", days)
+	fmt.Printf("✓ Availability pushed successfully (next %d working days)\n", data.NumDaysAhead)
 	return nil
 }
 

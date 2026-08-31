@@ -24,7 +24,10 @@ type Config struct {
 	BufferDuration  time.Duration `toml:"buffer_duration"`
 	WorkHoursStart  string        `toml:"work_hours_start"` // e.g., "09:00"
 	WorkHoursEnd    string        `toml:"work_hours_end"`   // e.g., "17:00"
-	IncludeWeekends bool          `toml:"include_weekends"` // default false
+	IncludeWeekends bool          `toml:"include_weekends"` // deprecated: use WeekStart/WeekEnd instead
+	WeekStart       int           `toml:"week_start"`       // ISO weekday availability starts on (1=Monday .. 7=Sunday), default 1
+	WeekEnd         int           `toml:"week_end"`         // ISO weekday availability ends on (1=Monday .. 7=Sunday), default 5
+	NumDaysAhead    int           `toml:"num_days_ahead"`   // number of working days to show ahead, default 5
 	Calendars       []Calendar    `toml:"calendars"`        // Multiple calendars to aggregate
 }
 
@@ -69,6 +72,9 @@ type configTOML struct {
 	WorkHoursStart  string     `toml:"work_hours_start"`
 	WorkHoursEnd    string     `toml:"work_hours_end"`
 	IncludeWeekends bool       `toml:"include_weekends"`
+	WeekStart       int        `toml:"week_start"`
+	WeekEnd         int        `toml:"week_end"`
+	NumDaysAhead    int        `toml:"num_days_ahead"`
 	Calendars       []Calendar `toml:"calendars"`
 }
 
@@ -93,6 +99,9 @@ func Load(path string) (*Config, error) {
 		WorkHoursStart:  cfgTOML.WorkHoursStart,
 		WorkHoursEnd:    cfgTOML.WorkHoursEnd,
 		IncludeWeekends: cfgTOML.IncludeWeekends,
+		WeekStart:       cfgTOML.WeekStart,
+		WeekEnd:         cfgTOML.WeekEnd,
+		NumDaysAhead:    cfgTOML.NumDaysAhead,
 		Calendars:       cfgTOML.Calendars,
 	}
 
@@ -122,6 +131,21 @@ func Load(path string) (*Config, error) {
 	}
 	if cfg.Timezone == "" {
 		cfg.Timezone = "UTC"
+	}
+	if cfg.WeekStart == 0 {
+		cfg.WeekStart = 1 // Monday
+	}
+	if cfg.WeekEnd == 0 {
+		if cfgTOML.IncludeWeekends {
+			// Preserve the behavior of the deprecated include_weekends flag
+			// for configs that haven't migrated to week_start/week_end yet.
+			cfg.WeekEnd = 7 // Sunday
+		} else {
+			cfg.WeekEnd = 5 // Friday
+		}
+	}
+	if cfg.NumDaysAhead == 0 {
+		cfg.NumDaysAhead = 5
 	}
 
 	return cfg, nil
@@ -171,6 +195,20 @@ func (c *Config) Validate() error {
 		return fmt.Errorf("work hours start and end are required")
 	}
 
+	// Zero means "unset" (Load fills in the default before Validate would normally
+	// see it), so only reject explicit out-of-range values here.
+	if c.WeekStart != 0 && (c.WeekStart < 1 || c.WeekStart > 7) {
+		return fmt.Errorf("week_start must be between 1 (Monday) and 7 (Sunday)")
+	}
+
+	if c.WeekEnd != 0 && (c.WeekEnd < 1 || c.WeekEnd > 7) {
+		return fmt.Errorf("week_end must be between 1 (Monday) and 7 (Sunday)")
+	}
+
+	if c.NumDaysAhead < 0 {
+		return fmt.Errorf("num_days_ahead must be positive")
+	}
+
 	if len(c.Calendars) == 0 {
 		return fmt.Errorf("at least one calendar must be configured in [[calendars]] section")
 	}
@@ -214,6 +252,9 @@ func (c *Config) Save(path string) error {
 		WorkHoursStart  string     `toml:"work_hours_start"`
 		WorkHoursEnd    string     `toml:"work_hours_end"`
 		IncludeWeekends bool       `toml:"include_weekends"`
+		WeekStart       int        `toml:"week_start"`
+		WeekEnd         int        `toml:"week_end"`
+		NumDaysAhead    int        `toml:"num_days_ahead"`
 		Calendars       []Calendar `toml:"calendars"`
 	}
 
@@ -224,6 +265,9 @@ func (c *Config) Save(path string) error {
 		WorkHoursStart:  c.WorkHoursStart,
 		WorkHoursEnd:    c.WorkHoursEnd,
 		IncludeWeekends: c.IncludeWeekends,
+		WeekStart:       c.WeekStart,
+		WeekEnd:         c.WeekEnd,
+		NumDaysAhead:    c.NumDaysAhead,
 		Calendars:       c.Calendars,
 	}
 
@@ -244,6 +288,9 @@ func Default() *Config {
 		WorkHoursStart:  "09:00",
 		WorkHoursEnd:    "17:00",
 		IncludeWeekends: false,
+		WeekStart:       1,
+		WeekEnd:         5,
+		NumDaysAhead:    5,
 		Calendars: []Calendar{
 			{
 				Provider:   "google",
