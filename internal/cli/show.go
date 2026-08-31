@@ -13,7 +13,7 @@ func newShowCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "show",
 		Short: "Display your availability",
-		Long:  "Shows your availability for the next 5 days based on your calendar.",
+		Long:  "Shows your availability for the next N working days (num_days_ahead in config) based on your calendar.",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return runShow()
 		},
@@ -23,8 +23,8 @@ func newShowCmd() *cobra.Command {
 }
 
 func runShow() error {
-	// Load availability data (next 5 days)
-	data, err := LoadAvailabilityData(5)
+	// Load availability data (next num_days_ahead working days, per config)
+	data, err := LoadAvailabilityData(0)
 	if err != nil {
 		return err
 	}
@@ -38,13 +38,13 @@ func runShow() error {
 		data.Cfg.MeetingDuration,
 		data.Cfg.BufferDuration,
 	)
-	blocks = FilterAvailabilityBlocks(blocks, data.Cfg.IncludeWeekends, data.Location)
+	blocks = FilterAvailabilityBlocks(blocks, data.Cfg.WeekStart, data.Cfg.WeekEnd, data.Location)
 
 	// Group by day
 	availability := engine.GroupBlocksByDay(blocks)
 
 	// Display
-	fmt.Printf("Your availability (next 5 days):\n\n")
+	fmt.Printf("Your availability (next %d working days):\n\n", data.NumDaysAhead)
 	for _, day := range availability {
 		dateStr := engine.FormatDate(day.Date, data.Location)
 		fmt.Printf("%s\n", dateStr)

@@ -25,8 +25,8 @@ func newCopyCmd() *cobra.Command {
 }
 
 func runCopy() error {
-	// Load availability data (next 5 days)
-	data, err := LoadAvailabilityData(5)
+	// Load availability data (next num_days_ahead working days, per config)
+	data, err := LoadAvailabilityData(0)
 	if err != nil {
 		return err
 	}
@@ -40,7 +40,7 @@ func runCopy() error {
 		data.Cfg.MeetingDuration,
 		data.Cfg.BufferDuration,
 	)
-	blocks = FilterAvailabilityBlocks(blocks, data.Cfg.IncludeWeekends, data.Location)
+	blocks = FilterAvailabilityBlocks(blocks, data.Cfg.WeekStart, data.Cfg.WeekEnd, data.Location)
 
 	// Group by day
 	availability := engine.GroupBlocksByDay(blocks)

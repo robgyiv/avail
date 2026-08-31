@@ -82,8 +82,13 @@ On first run, `avail` will create a default configuration file at `~/.config/ava
 - `meeting_duration` - Default meeting duration (default: 30 minutes)
 - `work_hours_start` - Start of work day (default: "09:00")
 - `work_hours_end` - End of work day (default: "17:00")
-- `include_weekends` - Include Saturday/Sunday availability (default: false)
+- `week_start` - First day of your working week, ISO weekday `1`-`7` (Monday=1 .. Sunday=7) (default: 1)
+- `week_end` - Last day of your working week, ISO weekday `1`-`7` (default: 5)
+- `num_days_ahead` - Number of working days to show ahead (default: 5)
+- `include_weekends` - Deprecated, use `week_start`/`week_end` instead. Include Saturday/Sunday availability (default: false)
 - `[[calendars]]` - Array of calendar configurations (supports multiple calendars)
+
+`avail show`, `avail copy`, and `avail push` always look ahead by *working* days, not calendar days — running `avail show` on a Thursday with the default `week_start`/`week_end` shows Thu, Fri, Mon, Tue, Wed (5 working days), skipping the weekend in between. Set `week_end = 7` to include weekends, or set `num_days_ahead` higher (e.g. `10`) to look further ahead, e.g. into next week.
 
 Each calendar entry requires:
 - `provider` - Calendar provider: `"google"`, `"network"`, or `"local"`
@@ -98,7 +103,9 @@ timezone = "America/New_York"
 meeting_duration = "30m"
 work_hours_start = "09:00"
 work_hours_end = "17:00"
-include_weekends = false
+week_start = 1
+week_end = 5
+num_days_ahead = 5
 
 [[calendars]]
 provider = "google"
@@ -124,7 +131,9 @@ timezone = "America/New_York"
 meeting_duration = "30m"
 work_hours_start = "09:00"
 work_hours_end = "17:00"
-include_weekends = false
+week_start = 1
+week_end = 5
+num_days_ahead = 5
 
 [[calendars]]
 provider = "google"
