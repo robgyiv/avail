@@ -10,21 +10,25 @@ import (
 
 // newShowCmd creates the show command.
 func newShowCmd() *cobra.Command {
+	var days int
+
 	cmd := &cobra.Command{
 		Use:   "show",
 		Short: "Display your availability",
 		Long:  "Shows your availability for the next N working days (num_days_ahead in config) based on your calendar.",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return runShow()
+			return runShow(days)
 		},
 	}
+
+	cmd.Flags().IntVarP(&days, "days", "d", 0, "Number of working days to calculate availability for (default: num_days_ahead from config)")
 
 	return cmd
 }
 
-func runShow() error {
+func runShow(days int) error {
 	// Load availability data (next num_days_ahead working days, per config)
-	data, err := LoadAvailabilityData(0)
+	data, err := LoadAvailabilityData(days)
 	if err != nil {
 		return err
 	}
