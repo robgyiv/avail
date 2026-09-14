@@ -24,9 +24,13 @@ Remove manual checking and generate up-to-date availability you can share.
 
 ## Privacy model
 
+**This CLI is local-first and privacy-first by design:**
+
 - Event details never leave your machine
-- Only derived availability is shared
+- Only derived availability (free/busy time blocks) is shared, and only if you choose to `avail push`
 - Read-only access wherever possible
+
+The hosted service (avail.website) may separately offer an optional Google Calendar link for people who don't want to run a CLI. That's a convenience trade-off, not a replacement — the local-first workflow described here remains fully supported and requires no calendar access on our servers at all.
 
 ## Philosophy
 
