@@ -54,8 +54,8 @@ func runCopy(days int, asJSON bool) error {
 
 	var output string
 	if asJSON {
-		payload := BuildAvailabilityJSON(availability, data.Location, data.Cfg.Timezone)
-		jsonBytes, err := json.MarshalIndent(payload, "", "  ")
+		apiReq := transformToAPIFormat(blocks, data.StartDate, data.EndDate, data.Cfg.Timezone)
+		jsonBytes, err := json.MarshalIndent(apiReq, "", "  ")
 		if err != nil {
 			return fmt.Errorf("failed to marshal availability as JSON: %w", err)
 		}

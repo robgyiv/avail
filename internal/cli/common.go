@@ -121,52 +121,6 @@ func inWeekRange(d, start, end int) bool {
 	return d >= start || d <= end
 }
 
-// AvailabilityJSON is the JSON representation of a set of availability days.
-type AvailabilityJSON struct {
-	GeneratedAt string            `json:"generated_at"`
-	Timezone    string            `json:"timezone"`
-	Days        []AvailabilityDay `json:"days"`
-}
-
-// AvailabilityDay is the JSON representation of a single day's availability.
-type AvailabilityDay struct {
-	Date   string              `json:"date"`
-	Blocks []AvailabilityBlock `json:"blocks"`
-}
-
-// AvailabilityBlock is the JSON representation of a single available time block.
-type AvailabilityBlock struct {
-	Start string `json:"start"`
-	End   string `json:"end"`
-}
-
-// BuildAvailabilityJSON converts grouped availability into a JSON-serializable
-// structure, formatting dates and times in the given location using RFC 3339.
-func BuildAvailabilityJSON(days []availability.Availability, location *time.Location, timezone string) AvailabilityJSON {
-	out := AvailabilityJSON{
-		GeneratedAt: time.Now().In(location).Format(time.RFC3339),
-		Timezone:    timezone,
-		Days:        make([]AvailabilityDay, 0, len(days)),
-	}
-
-	for _, day := range days {
-		blocks := make([]AvailabilityBlock, 0, len(day.Blocks))
-		for _, block := range day.Blocks {
-			blocks = append(blocks, AvailabilityBlock{
-				Start: block.Start.In(location).Format(time.RFC3339),
-				End:   block.End.In(location).Format(time.RFC3339),
-			})
-		}
-
-		out.Days = append(out.Days, AvailabilityDay{
-			Date:   day.Date.In(location).Format("2006-01-02"),
-			Blocks: blocks,
-		})
-	}
-
-	return out
-}
-
 // FilterAvailabilityBlocks keeps only the blocks whose start day falls within the
 // [weekStart, weekEnd] ISO weekday range (1=Monday .. 7=Sunday).
 func FilterAvailabilityBlocks(blocks []availability.TimeBlock, weekStart, weekEnd int, location *time.Location) []availability.TimeBlock {
