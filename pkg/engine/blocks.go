@@ -26,7 +26,7 @@ func GroupBlocksByDay(blocks []availability.TimeBlock) []availability.Availabili
 	var currentBlocks []availability.TimeBlock
 
 	for _, block := range sortedBlocks {
-		blockDate := block.Start.Truncate(24 * time.Hour)
+		blockDate := StartOfDay(block.Start)
 
 		if blockDate != currentDate {
 			// Save previous day's blocks if any

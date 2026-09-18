@@ -137,6 +137,95 @@ func TestCalculateAvailability_RespectsWorkHours(t *testing.T) {
 	}
 }
 
+// TestCalculateAvailability_NonUTCTimezone guards against a regression where
+// day boundaries were computed with Time.Truncate(24 * time.Hour), which
+// rounds to a multiple of 24h since the absolute zero time (i.e. UTC-day
+// boundaries) rather than local midnight. For any location whose UTC offset
+// isn't a multiple of 24h, that shifted the computed work hours by the
+// offset (e.g. work_hours 10:00-16:00 in UTC+7 rendered as 17:00-23:00).
+func TestCalculateAvailability_NonUTCTimezone(t *testing.T) {
+	meetingDuration := 30 * time.Minute
+	bufferDuration := 15 * time.Minute
+	workHours := availability.WorkHours{
+		Start: 10 * time.Hour, // 10:00
+		End:   16 * time.Hour, // 16:00
+	}
+
+	locations := []struct {
+		name     string
+		location *time.Location
+	}{
+		{"UTC+7 (e.g. Asia/Ho_Chi_Minh)", time.FixedZone("UTC+7", 7*60*60)},
+		{"UTC-5 (e.g. America/New_York, standard time)", time.FixedZone("UTC-5", -5*60*60)},
+		{"UTC+5:45 (e.g. Asia/Kathmandu)", time.FixedZone("UTC+5:45", 5*60*60+45*60)},
+	}
+
+	for _, loc := range locations {
+		t.Run(loc.name, func(t *testing.T) {
+			startDate := time.Date(2024, 3, 12, 0, 0, 0, 0, loc.location)
+			endDate := time.Date(2024, 3, 13, 0, 0, 0, 0, loc.location)
+
+			blocks := CalculateAvailability([]availability.Event{}, startDate, endDate, workHours, meetingDuration, bufferDuration)
+
+			if len(blocks) != 1 {
+				t.Fatalf("expected exactly one free block, got %d", len(blocks))
+			}
+
+			block := blocks[0]
+			gotStart := block.Start.In(loc.location)
+			gotEnd := block.End.In(loc.location)
+
+			wantStart := time.Date(2024, 3, 12, 10, 0, 0, 0, loc.location)
+			wantEnd := time.Date(2024, 3, 12, 16, 0, 0, 0, loc.location)
+
+			if !gotStart.Equal(wantStart) {
+				t.Errorf("block start = %v, want %v (local wall clock %02d:%02d)", gotStart, wantStart, gotStart.Hour(), gotStart.Minute())
+			}
+			if !gotEnd.Equal(wantEnd) {
+				t.Errorf("block end = %v, want %v (local wall clock %02d:%02d)", gotEnd, wantEnd, gotEnd.Hour(), gotEnd.Minute())
+			}
+		})
+	}
+}
+
+func TestStartOfDay(t *testing.T) {
+	tests := []struct {
+		name     string
+		location *time.Location
+	}{
+		{"UTC", time.UTC},
+		{"UTC+7", time.FixedZone("UTC+7", 7*60*60)},
+		{"UTC-8", time.FixedZone("UTC-8", -8*60*60)},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// A time in the middle of the day, in the given location.
+			in := time.Date(2024, 3, 12, 14, 30, 45, 0, tt.location)
+
+			got := StartOfDay(in)
+
+			if got.Location() != tt.location {
+				t.Errorf("StartOfDay() location = %v, want %v", got.Location(), tt.location)
+			}
+			y, m, d := got.Date()
+			if y != 2024 || m != time.March || d != 12 {
+				t.Errorf("StartOfDay() date = %04d-%02d-%02d, want 2024-03-12", y, m, d)
+			}
+			if h, min, s := got.Clock(); h != 0 || min != 0 || s != 0 {
+				t.Errorf("StartOfDay() wall clock = %02d:%02d:%02d, want 00:00:00", h, min, s)
+			}
+
+			// It must not equal the UTC-aligned Truncate result unless the
+			// location happens to be UTC.
+			truncated := in.Truncate(24 * time.Hour)
+			if tt.location != time.UTC && got.Equal(truncated) {
+				t.Errorf("StartOfDay() unexpectedly matches Truncate(24h) result %v for non-UTC location", truncated)
+			}
+		})
+	}
+}
+
 func TestCalculateAvailability_WithBuffer(t *testing.T) {
 	location := time.UTC
 	workHours := availability.WorkHours{
