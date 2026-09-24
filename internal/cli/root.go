@@ -4,12 +4,17 @@ import (
 	"github.com/spf13/cobra"
 )
 
+// version is the CLI version. Release builds override it with
+// -ldflags "-X github.com/robgyiv/avail/internal/cli.version=<tag>".
+var version = "dev"
+
 // NewRootCmd creates the root command for the CLI.
 func NewRootCmd() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "avail",
-		Short: "Generate availability from your calendar",
-		Long:  "A reliable way to generate human-friendly availability text from a real calendar, without forcing the recipient into a tool.",
+		Use:     "avail",
+		Short:   "Generate availability from your calendar",
+		Long:    "A reliable way to generate human-friendly availability text from a real calendar, without forcing the recipient into a tool.",
+		Version: version,
 	}
 
 	cmd.AddCommand(newAuthCmd())
