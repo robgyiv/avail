@@ -161,7 +161,7 @@ func TestParseICalDateTime_InvalidFormats(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			_, err := parseICalDateTime(tt.input)
+			_, err := parseICalDateTime(tt.input, time.UTC)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("parseICalDateTime() error = %v, wantErr %v", err, tt.wantErr)
 			}
@@ -194,7 +194,7 @@ func TestParseICalDateTime_ValidFormats(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			_, err := parseICalDateTime(tt.input)
+			_, err := parseICalDateTime(tt.input, time.UTC)
 			if err != nil {
 				t.Errorf("parseICalDateTime() error = %v, expected valid format", err)
 			}

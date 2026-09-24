@@ -10,6 +10,10 @@ import (
 )
 
 // parseICalendar parses iCalendar (ICS) format data and extracts events.
+//
+// Values that carry no zone of their own (floating date-times and DATE values)
+// are interpreted in startRange's location, which callers set from the user's
+// configured timezone.
 func parseICalendar(icalData string, startRange, endRange time.Time) ([]availability.Event, error) {
 	var events []availability.Event
 
@@ -31,55 +35,125 @@ func parseICalendar(icalData string, startRange, endRange time.Time) ([]availabi
 	return events, nil
 }
 
+// icalProperty is a parsed iCalendar content line: its parameters and its value.
+type icalProperty struct {
+	params map[string]string
+	value  string
+}
+
+// Property patterns are compiled once rather than per event.
+var (
+	dtstartPattern  = propertyPattern("DTSTART")
+	dtendPattern    = propertyPattern("DTEND")
+	durationPattern = propertyPattern("DURATION")
+	summaryPattern  = propertyPattern("SUMMARY")
+)
+
+// propertyPattern builds a pattern matching one iCalendar property line, capturing
+// its parameters and its value separately. Property names are case-insensitive.
+func propertyPattern(name string) *regexp.Regexp {
+	return regexp.MustCompile(`(?mi)^` + regexp.QuoteMeta(name) + `((?:;[^:\r\n]*)?):(.*)$`)
+}
+
+// findProperty extracts a property from a VEVENT block, keeping its parameters
+// (TZID, VALUE) instead of discarding them. Returns nil if the property is absent.
+func findProperty(veventData string, pattern *regexp.Regexp) *icalProperty {
+	match := pattern.FindStringSubmatch(veventData)
+	if match == nil {
+		return nil
+	}
+
+	prop := &icalProperty{
+		params: make(map[string]string),
+		value:  strings.TrimSpace(match[2]),
+	}
+
+	for _, param := range strings.Split(strings.TrimPrefix(match[1], ";"), ";") {
+		key, value, found := strings.Cut(param, "=")
+		if !found {
+			continue
+		}
+		key = strings.ToUpper(strings.TrimSpace(key))
+		prop.params[key] = strings.Trim(strings.TrimSpace(value), `"`)
+	}
+
+	return prop
+}
+
+// resolveLocation returns the location named by a TZID parameter, falling back to
+// defaultLoc when the parameter is absent or names a zone that cannot be loaded.
+// Outlook, for example, emits Windows zone names such as "AUS Eastern Standard
+// Time"; falling back to the user's own zone keeps the event (and the busy time it
+// represents) rather than dropping it.
+func resolveLocation(tzid string, defaultLoc *time.Location) *time.Location {
+	if defaultLoc == nil {
+		defaultLoc = time.UTC
+	}
+	if tzid == "" {
+		return defaultLoc
+	}
+
+	if loc, err := time.LoadLocation(tzid); err == nil {
+		return loc
+	}
+
+	// Some clients prefix the IANA name, either with a leading "/" for global ids
+	// or with a vendor path like "/mozilla.org/20050126_1/Europe/Berlin".
+	trimmed := strings.Trim(tzid, "/")
+	if loc, err := time.LoadLocation(trimmed); err == nil {
+		return loc
+	}
+	if segments := strings.Split(trimmed, "/"); len(segments) > 2 {
+		suffix := strings.Join(segments[len(segments)-2:], "/")
+		if loc, err := time.LoadLocation(suffix); err == nil {
+			return loc
+		}
+	}
+
+	return defaultLoc
+}
+
 // parseVEvent parses a single VEVENT block.
 func parseVEvent(veventData string, startRange, endRange time.Time) (*availability.Event, error) {
 	event := &availability.Event{}
 
-	// Extract DTSTART - handle both DTSTART;VALUE=DATE: and DTSTART: formats
-	dtstartRegex := regexp.MustCompile(`DTSTART(?:[^:]*)?:(.+)`)
-	dtstartMatch := dtstartRegex.FindStringSubmatch(veventData)
-	if len(dtstartMatch) < 2 {
+	// Per RFC 5545 a value without a zone is local to whoever reads the calendar,
+	// which here means the timezone the user configured.
+	defaultLoc := startRange.Location()
+
+	dtstart := findProperty(veventData, dtstartPattern)
+	if dtstart == nil {
 		return nil, fmt.Errorf("missing DTSTART")
 	}
 
-	dtstartLine := dtstartRegex.FindString(veventData)
-	isAllDay := strings.Contains(dtstartLine, "VALUE=DATE") || strings.Contains(dtstartLine, ";VALUE=DATE")
-
-	startTime, err := parseICalDateTime(dtstartMatch[1])
+	startTime, err := parseICalDateTime(dtstart.value, resolveLocation(dtstart.params["TZID"], defaultLoc))
 	if err != nil {
-		return nil, fmt.Errorf("invalid DTSTART: %w (value: %s)", err, dtstartMatch[1])
+		return nil, fmt.Errorf("invalid DTSTART: %w (value: %s)", err, dtstart.value)
 	}
 	event.Start = startTime
 
-	// Check if all-day event (DATE value type or 8-char date)
-	if isAllDay || len(strings.TrimSpace(dtstartMatch[1])) == 8 {
+	// All-day events carry a DATE value rather than a DATE-TIME.
+	if dtstart.params["VALUE"] == "DATE" || len(dtstart.value) == 8 {
 		event.AllDay = true
 	}
 
 	// Extract DTEND or DURATION
-	dtendRegex := regexp.MustCompile(`DTEND(?:[^:]*)?:(.+)`)
-	dtendMatch := dtendRegex.FindStringSubmatch(veventData)
-	if len(dtendMatch) >= 2 {
-		endTime, err := parseICalDateTime(dtendMatch[1])
+	if dtend := findProperty(veventData, dtendPattern); dtend != nil {
+		endTime, err := parseICalDateTime(dtend.value, resolveLocation(dtend.params["TZID"], defaultLoc))
 		if err == nil {
 			event.End = endTime
 		}
-	} else {
-		// Try DURATION
-		durationRegex := regexp.MustCompile(`DURATION(?:[^:]*)?:(.+)`)
-		durationMatch := durationRegex.FindStringSubmatch(veventData)
-		if len(durationMatch) >= 2 {
-			duration, err := parseICalDuration(durationMatch[1])
-			if err == nil {
-				event.End = event.Start.Add(duration)
-			}
+	} else if duration := findProperty(veventData, durationPattern); duration != nil {
+		d, err := parseICalDuration(duration.value)
+		if err == nil {
+			event.End = event.Start.Add(d)
 		}
 	}
 
 	if event.End.IsZero() {
 		if event.AllDay {
 			// For all-day events, end is start of next day
-			event.End = event.Start.Add(24 * time.Hour)
+			event.End = event.Start.AddDate(0, 0, 1)
 		} else {
 			// Default to 1 hour if no end time
 			event.End = event.Start.Add(time.Hour)
@@ -87,12 +161,8 @@ func parseVEvent(veventData string, startRange, endRange time.Time) (*availabili
 	}
 
 	// Extract SUMMARY (title)
-	summaryRegex := regexp.MustCompile(`SUMMARY(?:[^:]*)?:(.+)`)
-	summaryMatch := summaryRegex.FindStringSubmatch(veventData)
-	if len(summaryMatch) >= 2 {
-		event.Title = strings.TrimSpace(summaryMatch[1])
-		// Unescape iCalendar text
-		event.Title = unescapeICalText(event.Title)
+	if summary := findProperty(veventData, summaryPattern); summary != nil {
+		event.Title = unescapeICalText(summary.value)
 	}
 
 	// Filter by time range
@@ -103,27 +173,19 @@ func parseVEvent(veventData string, startRange, endRange time.Time) (*availabili
 	return event, nil
 }
 
-// parseICalDateTime parses an iCalendar date-time value.
-func parseICalDateTime(value string) (time.Time, error) {
+// parseICalDateTime parses an iCalendar date-time value. Values ending in Z or
+// carrying an explicit UTC offset describe an instant on their own; values without
+// one are floating (RFC 5545 3.3.5) and are interpreted in loc, as are DATE values,
+// whose midnight is local midnight.
+func parseICalDateTime(value string, loc *time.Location) (time.Time, error) {
 	value = strings.TrimSpace(value)
-	originalValue := value
-
-	// Check if it's a date-only value (8 characters, no time)
-	if len(value) == 8 && !strings.Contains(value, "T") {
-		// Date only format: YYYYMMDD
-		return time.Parse("20060102", value)
+	if loc == nil {
+		loc = time.UTC
 	}
 
-	// Handle VALUE=DATE parameter (all-day events)
-	if strings.Contains(value, "VALUE=DATE") {
-		// Extract just the date part
-		parts := strings.Split(value, ":")
-		if len(parts) >= 2 {
-			datePart := strings.TrimSpace(parts[len(parts)-1])
-			if len(datePart) == 8 {
-				return time.Parse("20060102", datePart)
-			}
-		}
+	// Date-only value: YYYYMMDD
+	if len(value) == 8 && !strings.Contains(value, "T") {
+		return time.ParseInLocation("20060102", value, loc)
 	}
 
 	// Try RFC3339 format first (most common in iCloud)
@@ -131,36 +193,31 @@ func parseICalDateTime(value string) (time.Time, error) {
 		return t, nil
 	}
 
-	// Try formats with T separator
-	formats := []string{
+	// Formats that describe their own zone.
+	zonedFormats := []string{
 		"20060102T150405Z",     // UTC with Z
-		"20060102T150405",      // Local time (no timezone)
 		"20060102T1504Z",       // UTC without seconds
-		"20060102T1504",        // Local time without seconds
 		"20060102T150405-0700", // With timezone offset
-		"20060102T150405+0700", // With timezone offset
-		"20060102T1504-0700",   // Without seconds, with timezone
-		"20060102T1504+0700",   // Without seconds, with timezone
+		"20060102T1504-0700",   // Without seconds, with timezone offset
 	}
-
-	for _, format := range formats {
+	for _, format := range zonedFormats {
 		if t, err := time.Parse(format, value); err == nil {
-			// If format doesn't include timezone and no Z, assume UTC
-			if !strings.Contains(format, "Z") && !strings.Contains(format, "-") && !strings.Contains(format, "+") {
-				return t.UTC(), nil
-			}
 			return t, nil
 		}
 	}
 
-	// Try date-only format
-	if len(value) == 8 {
-		if t, err := time.Parse("20060102", value); err == nil {
-			return time.Date(t.Year(), t.Month(), t.Day(), 0, 0, 0, 0, time.UTC), nil
+	// Floating formats, interpreted in loc.
+	floatingFormats := []string{
+		"20060102T150405", // Local time
+		"20060102T1504",   // Local time without seconds
+	}
+	for _, format := range floatingFormats {
+		if t, err := time.ParseInLocation(format, value, loc); err == nil {
+			return t, nil
 		}
 	}
 
-	return time.Time{}, fmt.Errorf("unable to parse date-time: %s (original: %s)", value, originalValue)
+	return time.Time{}, fmt.Errorf("unable to parse date-time: %s", value)
 }
 
 // parseICalDuration parses an iCalendar duration value (e.g., PT1H30M).
