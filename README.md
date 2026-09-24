@@ -371,6 +371,59 @@ Fri 15 Mar
 Time zone: UTC
 ```
 
+You can also limit or extend the window with `--days` (`-d`):
+
+```bash
+avail show --days 10
+```
+
+#### JSON output
+
+Pass `--json` to print machine-readable output instead of the human-friendly
+listing:
+
+```bash
+avail show --json
+```
+
+```json
+{
+  "slots": [
+    {
+      "start": "2026-09-24T09:00:00+10:00",
+      "end": "2026-09-24T17:00:00+10:00"
+    },
+    {
+      "start": "2026-09-25T09:00:00+10:00",
+      "end": "2026-09-25T17:00:00+10:00"
+    }
+  ],
+  "timezone": "Australia/Melbourne",
+  "window": {
+    "start": "2026-09-24",
+    "end": "2026-09-26"
+  },
+  "generated_at": "2026-09-24T08:44:08+07:00"
+}
+```
+
+| Field | Description |
+| --- | --- |
+| `slots` | Free time blocks, each with RFC 3339 `start` and `end` timestamps |
+| `timezone` | The IANA timezone from your config |
+| `window` | The `start`/`end` dates (`YYYY-MM-DD`) of the range that was calculated |
+| `generated_at` | RFC 3339 timestamp of when the output was produced |
+
+This is the same payload `avail push` sends to the API, so `--json` is a way to
+preview or pipe a push without publishing anything. It pairs well with `jq`:
+
+```bash
+avail show --json | jq '.slots | length'
+```
+
+Only derived availability appears in the JSON — no event titles, attendees, or
+other calendar details.
+
 ### Copy to Clipboard
 
 Copy formatted availability text to your clipboard:
@@ -389,6 +442,25 @@ I'm free:
 ```
 
 Perfect for pasting into emails, Slack, or other messaging apps.
+
+`--days` (`-d`) works here too:
+
+```bash
+avail copy --days 10
+```
+
+#### JSON output
+
+Pass `--json` to put the machine-readable payload on the clipboard instead of
+the prose version:
+
+```bash
+avail copy --json
+```
+
+The clipboard then contains the same JSON structure documented under
+[`avail show --json`](#json-output) — useful for pasting into an API client, a
+scratch file, or a ticket.
 
 ### Push to API
 
@@ -431,7 +503,7 @@ avail push --days 7
 The command will:
 
 - Calculate your availability using the same logic as `avail show`
-- Transform it to the API format
+- Transform it to the API format (inspect it beforehand with `avail show --json`)
 - POST it to `https://api.avail.website/v1/availability`
 - Display a success message
 
