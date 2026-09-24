@@ -7,6 +7,18 @@ import (
 	"github.com/robgyiv/avail/pkg/availability"
 )
 
+// StartOfDay returns midnight of t's calendar date in t's own location.
+//
+// This is not the same as t.Truncate(24 * time.Hour): Truncate rounds down to
+// a multiple of 24h since the absolute zero time, which aligns to UTC-day
+// boundaries rather than local midnight. For any location with a non-zero
+// UTC offset that shifts the computed day boundary (and, downstream, work
+// hours) by that offset.
+func StartOfDay(t time.Time) time.Time {
+	y, m, d := t.Date()
+	return time.Date(y, m, d, 0, 0, 0, 0, t.Location())
+}
+
 // CalculateAvailability computes free time blocks from calendar events.
 // It takes events, a date range, work hours, meeting duration, and buffer duration
 // to determine available time slots.
@@ -27,7 +39,7 @@ func CalculateAvailability(
 	var freeBlocks []availability.TimeBlock
 
 	// Iterate through each day in the range
-	currentDate := startDate.Truncate(24 * time.Hour)
+	currentDate := StartOfDay(startDate)
 	for currentDate.Before(endDate) {
 		dayStart := currentDate.Add(workHours.Start)
 		dayEnd := currentDate.Add(workHours.End)
@@ -48,7 +60,7 @@ func CalculateAvailability(
 
 // filterEventsForDay returns events that overlap with the given day.
 func filterEventsForDay(events []availability.Event, day time.Time) []availability.Event {
-	dayStart := day.Truncate(24 * time.Hour)
+	dayStart := StartOfDay(day)
 	dayEnd := dayStart.Add(24 * time.Hour)
 
 	var dayEvents []availability.Event

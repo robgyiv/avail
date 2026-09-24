@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"encoding/json"
 	"fmt"
 	"strings"
 
@@ -13,22 +14,24 @@ import (
 // newCopyCmd creates the copy command.
 func newCopyCmd() *cobra.Command {
 	var days int
+	var asJSON bool
 
 	cmd := &cobra.Command{
 		Use:   "copy",
 		Short: "Copy availability to clipboard",
 		Long:  "Copies formatted availability text to the clipboard for pasting.",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return runCopy(days)
+			return runCopy(days, asJSON)
 		},
 	}
 
 	cmd.Flags().IntVarP(&days, "days", "d", 0, "Number of working days to calculate availability for (default: num_days_ahead from config)")
+	cmd.Flags().BoolVar(&asJSON, "json", false, "Copy availability as JSON instead of formatted text")
 
 	return cmd
 }
 
-func runCopy(days int) error {
+func runCopy(days int, asJSON bool) error {
 	// Load availability data (next num_days_ahead working days, per config)
 	data, err := LoadAvailabilityData(days)
 	if err != nil {
@@ -49,18 +52,27 @@ func runCopy(days int) error {
 	// Group by day
 	availability := engine.GroupBlocksByDay(blocks)
 
-	// Format for clipboard
-	var lines []string
-	lines = append(lines, "I'm free:")
-	for _, day := range availability {
-		for _, block := range day.Blocks {
-			dateStr := engine.FormatDate(day.Date, data.Location)
-			blockStr := engine.FormatTimeBlock(block, data.Location)
-			lines = append(lines, fmt.Sprintf("• %s %s", dateStr, blockStr))
+	var output string
+	if asJSON {
+		apiReq := transformToAPIFormat(blocks, data.StartDate, data.EndDate, data.Cfg.Timezone)
+		jsonBytes, err := json.MarshalIndent(apiReq, "", "  ")
+		if err != nil {
+			return fmt.Errorf("failed to marshal availability as JSON: %w", err)
 		}
+		output = string(jsonBytes)
+	} else {
+		// Format for clipboard
+		var lines []string
+		lines = append(lines, "I'm free:")
+		for _, day := range availability {
+			for _, block := range day.Blocks {
+				dateStr := engine.FormatDate(day.Date, data.Location)
+				blockStr := engine.FormatTimeBlock(block, data.Location)
+				lines = append(lines, fmt.Sprintf("• %s %s", dateStr, blockStr))
+			}
+		}
+		output = strings.Join(lines, "\n")
 	}
-
-	output := strings.Join(lines, "\n")
 
 	// Copy to clipboard
 	if err := clipboard.WriteAll(output); err != nil {

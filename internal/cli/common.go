@@ -9,6 +9,7 @@ import (
 	"github.com/robgyiv/avail/internal/calendar/aggregate"
 	"github.com/robgyiv/avail/internal/config"
 	"github.com/robgyiv/avail/pkg/availability"
+	"github.com/robgyiv/avail/pkg/engine"
 )
 
 // AvailabilityData contains all the data needed for availability calculations.
@@ -67,7 +68,7 @@ func LoadAvailabilityData(numDaysAhead int) (*AvailabilityData, error) {
 	// numDaysAhead working days, not just numDaysAhead calendar days, so that
 	// e.g. running on a Thursday with a Mon-Fri week still shows a full working week.
 	now := time.Now().In(location)
-	startDate := now.Truncate(24 * time.Hour)
+	startDate := engine.StartOfDay(now)
 	endDate := calculateEndDate(startDate, numDaysAhead, cfg.WeekStart, cfg.WeekEnd)
 
 	// Fetch events
