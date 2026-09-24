@@ -9,6 +9,7 @@ import (
 	"time"
 
 	cal "github.com/robgyiv/avail/internal/calendar"
+	"github.com/robgyiv/avail/internal/calendar/ical"
 	"github.com/robgyiv/avail/internal/config"
 	"github.com/robgyiv/avail/pkg/availability"
 )
@@ -144,7 +145,7 @@ func (p *Provider) ListEvents(ctx context.Context, start, end time.Time) ([]avai
 	icalData := string(bodyBytes)
 
 	// Parse iCalendar format
-	events, err := parseICalendar(icalData, start, end)
+	events, err := ical.ParseCalendar(icalData, start, end)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse calendar: %w", err)
 	}

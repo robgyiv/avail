@@ -1,4 +1,11 @@
-package url
+// Package ical parses the subset of iCalendar (RFC 5545) that availability
+// calculation needs: the events in a VEVENT block and the instants they occupy.
+// It is shared by the providers that read .ics data, whether from a local file or
+// a public URL.
+//
+// The parser is deliberately small rather than a full RFC 5545 implementation; it
+// does not handle recurrence rules, line folding, or VTIMEZONE definitions.
+package ical
 
 import (
 	"fmt"
@@ -9,12 +16,13 @@ import (
 	"github.com/robgyiv/avail/pkg/availability"
 )
 
-// parseICalendar parses iCalendar (ICS) format data and extracts events.
+// ParseCalendar parses iCalendar (ICS) data and extracts the events that overlap
+// [startRange, endRange].
 //
-// Values that carry no zone of their own (floating date-times and DATE values)
-// are interpreted in startRange's location, which callers set from the user's
-// configured timezone.
-func parseICalendar(icalData string, startRange, endRange time.Time) ([]availability.Event, error) {
+// Values that carry no zone of their own (floating date-times and DATE values) are
+// interpreted in startRange's location, so callers should pass a range in the
+// user's configured timezone rather than in UTC.
+func ParseCalendar(icalData string, startRange, endRange time.Time) ([]availability.Event, error) {
 	var events []availability.Event
 
 	// Simple iCalendar parser - looks for VEVENT blocks
@@ -188,7 +196,7 @@ func parseICalDateTime(value string, loc *time.Location) (time.Time, error) {
 		return time.ParseInLocation("20060102", value, loc)
 	}
 
-	// Try RFC3339 format first (common in many calendar systems)
+	// Try RFC3339 format first (some calendar systems emit it)
 	if t, err := time.Parse(time.RFC3339, value); err == nil {
 		return t, nil
 	}

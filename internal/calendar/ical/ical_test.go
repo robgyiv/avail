@@ -1,4 +1,4 @@
-package local
+package ical
 
 import (
 	"testing"
@@ -9,13 +9,13 @@ func TestParseICalendar_EmptyInput(t *testing.T) {
 	start := time.Date(2024, 3, 12, 0, 0, 0, 0, time.UTC)
 	end := time.Date(2024, 3, 13, 0, 0, 0, 0, time.UTC)
 
-	events, err := parseICalendar("", start, end)
+	events, err := ParseCalendar("", start, end)
 	if err != nil {
-		t.Errorf("parseICalendar() error = %v, expected no error for empty input", err)
+		t.Errorf("ParseCalendar() error = %v, expected no error for empty input", err)
 	}
 	// parseICalendar returns nil for empty input (no events found)
 	if events != nil && len(events) != 0 {
-		t.Errorf("parseICalendar() returned %d events, want 0 or nil", len(events))
+		t.Errorf("ParseCalendar() returned %d events, want 0 or nil", len(events))
 	}
 }
 
@@ -24,14 +24,14 @@ func TestParseICalendar_InvalidFormat(t *testing.T) {
 	end := time.Date(2024, 3, 13, 0, 0, 0, 0, time.UTC)
 
 	invalidICS := `This is not a valid iCalendar format`
-	events, err := parseICalendar(invalidICS, start, end)
+	events, err := ParseCalendar(invalidICS, start, end)
 	if err != nil {
 		// Error is acceptable
 		return
 	}
 	// parseICalendar returns nil when no VEVENT blocks are found
 	if events != nil && len(events) != 0 {
-		t.Errorf("parseICalendar() returned %d events for invalid format, want 0 or nil", len(events))
+		t.Errorf("ParseCalendar() returned %d events for invalid format, want 0 or nil", len(events))
 	}
 }
 

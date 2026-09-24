@@ -3,6 +3,7 @@
 ## Project Structure & Module Organization
 - `cmd/avail/` hosts the CLI entrypoint and wiring.
 - `internal/` contains app internals (CLI commands, calendar providers, config, API client, auth helpers). Treat these packages as non-public.
+- `internal/calendar/ical/` parses .ics data and is shared by the `local` and `url` providers; fix parsing bugs there rather than in a provider.
 - `pkg/` holds reusable components; the availability engine lives in `pkg/engine/`.
 - `bin/` is a local build output folder (ignored in CI).
 - `.github/workflows/ci.yml` defines formatting and test checks.
