@@ -390,12 +390,12 @@ avail show --json
 {
   "slots": [
     {
-      "start": "2026-09-24T09:00:00+10:00",
-      "end": "2026-09-24T17:00:00+10:00"
+      "start": "2026-09-23T23:00:00Z",
+      "end": "2026-09-24T07:00:00Z"
     },
     {
-      "start": "2026-09-25T09:00:00+10:00",
-      "end": "2026-09-25T17:00:00+10:00"
+      "start": "2026-09-24T23:00:00Z",
+      "end": "2026-09-25T07:00:00Z"
     }
   ],
   "timezone": "Australia/Melbourne",
@@ -403,16 +403,20 @@ avail show --json
     "start": "2026-09-24",
     "end": "2026-09-26"
   },
-  "generated_at": "2026-09-24T08:44:08+07:00"
+  "generated_at": "2026-09-24T01:57:21Z"
 }
 ```
 
 | Field | Description |
 | --- | --- |
-| `slots` | Free time blocks, each with RFC 3339 `start` and `end` timestamps |
-| `timezone` | The IANA timezone from your config |
-| `window` | The `start`/`end` dates (`YYYY-MM-DD`) of the range that was calculated |
-| `generated_at` | RFC 3339 timestamp of when the output was produced |
+| `slots` | Free time blocks, each with RFC 3339 `start` and `end` timestamps in UTC |
+| `timezone` | The IANA timezone from your config — the zone these slots are meant to be displayed in |
+| `window` | The `start`/`end` dates (`YYYY-MM-DD`) of the range that was calculated, in your timezone |
+| `generated_at` | RFC 3339 timestamp (UTC) of when the output was produced |
+
+Timestamps are always UTC: the two slots above are 09:00–17:00 on the 24th and
+25th in `Australia/Melbourne`. Convert them with the `timezone` field for
+display — `avail show` without `--json` already does this for you.
 
 This is the same payload `avail push` sends to the API, so `--json` is a way to
 preview or pipe a push without publishing anything. It pairs well with `jq`:

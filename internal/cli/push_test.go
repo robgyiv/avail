@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"strings"
 	"testing"
 	"time"
 
@@ -221,4 +222,47 @@ func TestTransformToAPIFormat_APIModelsCompatibility(t *testing.T) {
 
 	// Verify window is valid WindowRange
 	var _ api.WindowRange = req.Window
+}
+
+// TestTransformToAPIFormat_NormalizesToUTC covers blocks whose boundaries carry
+// different zones: work-hour edges come from the configured timezone, while edges
+// clipped by an event inherit that event's zone. The payload should express every
+// instant in UTC rather than mixing offsets, while the window keeps the local dates.
+func TestTransformToAPIFormat_NormalizesToUTC(t *testing.T) {
+	melbourne, err := time.LoadLocation("Australia/Melbourne")
+	if err != nil {
+		t.Skipf("Australia/Melbourne unavailable: %v", err)
+	}
+
+	startDate := time.Date(2026, 9, 25, 0, 0, 0, 0, melbourne)
+	endDate := time.Date(2026, 9, 26, 0, 0, 0, 0, melbourne)
+
+	blocks := []availability.TimeBlock{
+		{
+			// Work-hour start in the user's zone, end clipped by a UTC-sourced event.
+			Start: time.Date(2026, 9, 25, 9, 0, 0, 0, melbourne),
+			End:   time.Date(2026, 9, 24, 23, 45, 0, 0, time.UTC),
+		},
+	}
+
+	req := transformToAPIFormat(blocks, startDate, endDate, "Australia/Melbourne")
+
+	if got, want := req.Slots[0].Start, "2026-09-24T23:00:00Z"; got != want {
+		t.Errorf("Slots[0].Start = %q, want %q", got, want)
+	}
+	if got, want := req.Slots[0].End, "2026-09-24T23:45:00Z"; got != want {
+		t.Errorf("Slots[0].End = %q, want %q", got, want)
+	}
+
+	// The window is a pair of calendar dates in the user's zone, not instants.
+	if got, want := req.Window.Start, "2026-09-25"; got != want {
+		t.Errorf("Window.Start = %q, want %q", got, want)
+	}
+	if got, want := req.Timezone, "Australia/Melbourne"; got != want {
+		t.Errorf("Timezone = %q, want %q", got, want)
+	}
+
+	if !strings.HasSuffix(req.GeneratedAt, "Z") {
+		t.Errorf("GeneratedAt = %q, want a UTC timestamp", req.GeneratedAt)
+	}
 }

@@ -69,12 +69,16 @@ func runPush(days int) error {
 
 // transformToAPIFormat converts availability blocks to the API request format.
 func transformToAPIFormat(blocks []availability.TimeBlock, startDate, endDate time.Time, timezone string) *api.UpdateAvailabilityRequest {
-	// Convert time blocks to API slots
+	// Convert time blocks to API slots. Instants are emitted in UTC so a payload
+	// never mixes offsets: block boundaries inherit their zone from whatever
+	// produced them (work hours from the configured timezone, clipped edges from
+	// the event that clipped them), and the timezone field already tells the
+	// consumer which zone to display them in.
 	slots := make([]api.AvailabilitySlotRequest, 0, len(blocks))
 	for _, block := range blocks {
 		slots = append(slots, api.AvailabilitySlotRequest{
-			Start: block.Start.Format(time.RFC3339),
-			End:   block.End.Format(time.RFC3339),
+			Start: block.Start.UTC().Format(time.RFC3339),
+			End:   block.End.UTC().Format(time.RFC3339),
 		})
 	}
 
@@ -85,7 +89,7 @@ func transformToAPIFormat(blocks []availability.TimeBlock, startDate, endDate ti
 	}
 
 	// Set generated_at to current time
-	generatedAt := time.Now().Format(time.RFC3339)
+	generatedAt := time.Now().UTC().Format(time.RFC3339)
 
 	return &api.UpdateAvailabilityRequest{
 		Slots:       slots,
