@@ -42,7 +42,45 @@ Avail assists conversations — it does not automate them.
 
 ## Setup
 
-### Prerequisites
+### Install
+
+Prebuilt binaries for macOS and Linux (amd64 and arm64) are attached to every
+[release](https://github.com/robgyiv/avail/releases). No Go toolchain required.
+
+```bash
+# Pick your version, OS and architecture
+VERSION=v0.1.0
+OS=darwin   # or linux
+ARCH=arm64  # or amd64
+
+curl -fsSLO "https://github.com/robgyiv/avail/releases/download/${VERSION}/avail_${VERSION}_${OS}_${ARCH}.tar.gz"
+tar -xzf "avail_${VERSION}_${OS}_${ARCH}.tar.gz"
+sudo mv avail /usr/local/bin/avail
+
+avail --version
+```
+
+Each release also ships a `checksums.txt` you can verify against:
+
+```bash
+curl -fsSLO "https://github.com/robgyiv/avail/releases/download/${VERSION}/checksums.txt"
+shasum -a 256 -c checksums.txt --ignore-missing
+```
+
+On macOS, Gatekeeper may block the binary on first run because the release
+archives are not notarized. Clear the quarantine attribute with:
+
+```bash
+xattr -d com.apple.quarantine /usr/local/bin/avail
+```
+
+Alternatively, install with Go directly:
+
+```bash
+go install github.com/robgyiv/avail/cmd/avail@latest
+```
+
+### Prerequisites for building from source
 
 - Go 1.21 or later
 
@@ -51,7 +89,7 @@ Avail assists conversations — it does not automate them.
 ```bash
 # Clone the repository
 git clone https://github.com/robgyiv/avail.git
-cd availability
+cd avail
 
 # Build the binary
 go build -o bin/avail ./cmd/avail
@@ -59,6 +97,8 @@ go build -o bin/avail ./cmd/avail
 # Or install directly
 go install ./cmd/avail
 ```
+
+Source builds report `avail version dev`; release archives report their tag.
 
 ### Development
 
@@ -406,6 +446,12 @@ avail --help
 avail show --help
 avail copy --help
 avail push --help
+```
+
+Check which version you're running:
+
+```bash
+avail --version
 ```
 
 ---
