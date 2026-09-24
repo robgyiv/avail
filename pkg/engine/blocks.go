@@ -7,10 +7,19 @@ import (
 	"github.com/robgyiv/avail/pkg/availability"
 )
 
-// GroupBlocksByDay groups time blocks by their date.
-func GroupBlocksByDay(blocks []availability.TimeBlock) []availability.Availability {
+// GroupBlocksByDay groups time blocks by their calendar date in location.
+//
+// Blocks within a single day can carry different locations: work-hour edges come
+// from the configured timezone, while an edge clipped by an event inherits that
+// event's zone. Days are therefore keyed by the date in location, not by comparing
+// time.Time values with == (which compares the *Location pointer as well, so two
+// separately loaded copies of the same zone would split one day in two).
+func GroupBlocksByDay(blocks []availability.TimeBlock, location *time.Location) []availability.Availability {
 	if len(blocks) == 0 {
 		return nil
+	}
+	if location == nil {
+		location = time.UTC
 	}
 
 	// Sort blocks by start time
@@ -26,9 +35,9 @@ func GroupBlocksByDay(blocks []availability.TimeBlock) []availability.Availabili
 	var currentBlocks []availability.TimeBlock
 
 	for _, block := range sortedBlocks {
-		blockDate := StartOfDay(block.Start)
+		blockDate := StartOfDay(block.Start.In(location))
 
-		if blockDate != currentDate {
+		if !blockDate.Equal(currentDate) {
 			// Save previous day's blocks if any
 			if len(currentBlocks) > 0 {
 				result = append(result, availability.Availability{

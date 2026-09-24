@@ -50,7 +50,7 @@ func runCopy(days int, asJSON bool) error {
 	blocks = FilterAvailabilityBlocks(blocks, data.Cfg.WeekStart, data.Cfg.WeekEnd, data.Location)
 
 	// Group by day
-	availability := engine.GroupBlocksByDay(blocks)
+	availability := engine.GroupBlocksByDay(blocks, data.Location)
 
 	var output string
 	if asJSON {

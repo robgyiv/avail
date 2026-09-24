@@ -48,7 +48,7 @@ func runShow(days int, asJSON bool) error {
 	blocks = FilterAvailabilityBlocks(blocks, data.Cfg.WeekStart, data.Cfg.WeekEnd, data.Location)
 
 	// Group by day
-	availability := engine.GroupBlocksByDay(blocks)
+	availability := engine.GroupBlocksByDay(blocks, data.Location)
 
 	if asJSON {
 		apiReq := transformToAPIFormat(blocks, data.StartDate, data.EndDate, data.Cfg.Timezone)
