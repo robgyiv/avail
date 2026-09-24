@@ -6,6 +6,7 @@
 - `pkg/` holds reusable components; the availability engine lives in `pkg/engine/`.
 - `bin/` is a local build output folder (ignored in CI).
 - `.github/workflows/ci.yml` defines formatting and test checks.
+- `.github/workflows/release.yml` builds macOS and Linux archives and publishes a GitHub release on `v*` tags.
 
 ## Build, Test, and Development Commands
 - `go build -o bin/avail ./cmd/avail` builds the CLI binary locally.

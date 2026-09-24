@@ -1,0 +1,60 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Build and release
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: "go.mod"
+          cache: true
+          cache-dependency-path: go.sum
+
+      - name: Run tests
+        run: go test ./...
+
+      - name: Build archives
+        env:
+          CGO_ENABLED: "0"
+        run: |
+          set -euo pipefail
+          version="${GITHUB_REF_NAME}"
+          mkdir -p dist
+          for target in darwin/amd64 darwin/arm64 linux/amd64 linux/arm64; do
+            goos="${target%/*}"
+            goarch="${target#*/}"
+            echo "Building ${goos}/${goarch}"
+            GOOS="$goos" GOARCH="$goarch" go build \
+              -trimpath \
+              -ldflags "-s -w -X github.com/robgyiv/avail/internal/cli.version=${version}" \
+              -o "dist/avail" ./cmd/avail
+            tar -czf "dist/avail_${version}_${goos}_${goarch}.tar.gz" \
+              -C dist avail \
+              -C "$GITHUB_WORKSPACE" LICENSE README.md
+            rm dist/avail
+          done
+          cd dist && sha256sum *.tar.gz > checksums.txt
+
+      - name: Create release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" \
+            --repo "$GITHUB_REPOSITORY" \
+            --title "$GITHUB_REF_NAME" \
+            --generate-notes \
+            dist/*.tar.gz dist/checksums.txt
